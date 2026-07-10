@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "sdd:check": "node scripts/sdd-check.mjs",
     "data:generate": "node scripts/generate-game-data.mjs"
   },
   "dependencies": {
