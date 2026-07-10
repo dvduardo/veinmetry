@@ -1,0 +1,477 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <meta name="theme-color" content="#101411" />
+    <meta name="description" content="Dossiê conceitual do Veinmetry, auditor de recursos para Satisfactory." />
+    <title>Veinmetry — Dossiê do produto</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101411;
+        --surface: #171c18;
+        --surface-2: #202620;
+        --text: #edf2eb;
+        --muted: #95a097;
+        --line: #323a33;
+        --acid: #b8f34a;
+        --acid-ink: #192208;
+        --danger: #ff725e;
+        --warning: #efb65b;
+        --copper: #d47615;
+        --caterium: #fdcc48;
+        --uranium: #88d288;
+        --quartz: #f177b5;
+        --water: #3984bf;
+        --resin: #9b55bf;
+        --radius: 20px;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      * { box-sizing: border-box; }
+      html { scroll-behavior: smooth; }
+      body { margin: 0; min-width: 320px; background: var(--bg); }
+      button { font: inherit; color: inherit; }
+      a { color: inherit; }
+
+      .site-nav {
+        position: sticky;
+        z-index: 20;
+        top: 0;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 24px;
+        min-height: 64px;
+        padding: 0 max(20px, calc((100vw - 1160px) / 2));
+        border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent);
+        background: color-mix(in srgb, var(--bg) 88%, transparent);
+        backdrop-filter: blur(18px);
+      }
+
+      .mini-brand { font-weight: 850; letter-spacing: -.045em; text-decoration: none; }
+      .site-nav div { display: flex; gap: 8px; overflow-x: auto; }
+      .site-nav div a { padding: 7px 10px; color: var(--muted); text-decoration: none; font-size: 12px; white-space: nowrap; }
+      .site-nav div a:hover { color: var(--text); }
+
+      .dossier-hero, .chapter { width: min(1160px, calc(100% - 40px)); margin: auto; }
+      .dossier-hero { min-height: calc(100vh - 64px); display: grid; align-content: center; padding: 80px 0; }
+      .kicker { margin: 0; color: var(--acid); text-transform: uppercase; letter-spacing: .16em; font: 600 11px/1.5 "SFMono-Regular", Consolas, monospace; }
+      .dossier-hero h1 { max-width: 920px; margin: 22px 0; font-size: clamp(58px, 11vw, 132px); line-height: .82; letter-spacing: -.085em; }
+      .dossier-hero h1 span { color: var(--muted); }
+      .hero-lede { max-width: 680px; margin: 16px 0 42px; color: var(--muted); font-size: clamp(18px, 2.1vw, 23px); line-height: 1.6; }
+      .hero-meta { display: flex; flex-wrap: wrap; gap: 9px; }
+      .hero-meta span { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 500 11px monospace; }
+
+      .chapter { padding: 110px 0; border-top: 1px solid var(--line); }
+      .chapter-head { display: grid; grid-template-columns: 140px 1fr; gap: 40px; margin-bottom: 60px; }
+      .chapter-number { color: var(--acid); font: 500 13px monospace; }
+      .chapter-head h2 { max-width: 840px; margin: 0; font-size: clamp(40px, 6vw, 72px); line-height: .95; letter-spacing: -.065em; }
+      .chapter-head h2 span { color: var(--muted); }
+
+      .pain-grid { display: grid; grid-template-columns: 1.35fr .65fr; gap: 18px; }
+      .statement, .pain-card, .solution-flow, .name-card, .identity-stage, .prototype-shell, .disclaimer { border: 1px solid var(--line); background: var(--surface); border-radius: var(--radius); }
+      .statement { min-height: 350px; display: flex; flex-direction: column; justify-content: space-between; padding: clamp(28px, 5vw, 56px); }
+      .statement blockquote { max-width: 720px; margin: 0; font-size: clamp(28px, 4.5vw, 55px); line-height: 1.07; letter-spacing: -.055em; }
+      .statement blockquote em { color: var(--danger); font-style: normal; }
+      .statement small { color: var(--muted); line-height: 1.6; }
+      .pain-stack { display: grid; gap: 18px; }
+      .pain-card { padding: 25px; }
+      .pain-card b { display: block; margin-bottom: 8px; font-size: 15px; }
+      .pain-card p { margin: 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+
+      .solution-flow { margin-top: 18px; padding: 30px; }
+      .solution-flow h3 { margin: 0 0 25px; font-size: 24px; letter-spacing: -.04em; }
+      .flow-steps { display: grid; grid-template-columns: repeat(4, 1fr); }
+      .flow-step { position: relative; padding: 18px 24px 18px 0; }
+      .flow-step:not(:last-child)::after { content: "→"; position: absolute; right: 12px; top: 20px; color: var(--acid); }
+      .flow-step span { display: block; margin-bottom: 9px; color: var(--acid); font: 600 11px monospace; }
+      .flow-step strong { display: block; margin-bottom: 5px; }
+      .flow-step p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.5; }
+
+      .scope-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 18px; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--line); }
+      .scope-strip div { padding: 24px; background: var(--surface); }
+      .scope-strip span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; }
+      .scope-strip strong { display: block; margin-top: 7px; font-size: 18px; }
+
+      .name-layout { display: grid; grid-template-columns: .72fr 1.28fr; gap: 18px; }
+      .name-card { padding: 32px; }
+      .name-equation { display: grid; gap: 12px; margin-top: 30px; }
+      .name-part { padding: 20px; border-radius: 14px; background: var(--surface-2); }
+      .name-part b { display: block; font-size: 28px; letter-spacing: -.05em; }
+      .name-part p { margin: 6px 0 0; color: var(--muted); font-size: 13px; line-height: 1.55; }
+      .plus { padding-left: 20px; color: var(--acid); font: 500 18px monospace; }
+
+      .identity-stage { min-height: 420px; display: grid; place-items: center; padding: 50px 28px; overflow: hidden; background: radial-gradient(circle at 50% 60%, #273225 0, var(--surface) 48%); }
+      .identity-inner { width: min(520px, 90%); text-align: center; }
+      .identity-word { position: relative; display: inline-block; padding-bottom: 19px; font-size: clamp(48px, 8vw, 84px); font-weight: 850; letter-spacing: -.07em; }
+      .sim-belt { position: absolute; left: 0; right: 0; bottom: 0; height: 9px; overflow: hidden; border: 1px solid #465047; border-radius: 2px; background: repeating-linear-gradient(90deg, #1c231d 0 7px, #273028 7px 9px); box-shadow: inset 0 -2px #0b0e0c; }
+      .sim-belt.flowing { animation: belt-surface .42s linear infinite; }
+      .sim-belt.jammed { border-color: var(--danger); box-shadow: 0 0 12px #ff725e66, inset 0 -2px #0b0e0c; animation: belt-jam .14s linear infinite; }
+      .sim-belt.jammed::after { content: "!"; position: absolute; right: 1px; top: 0; width: 8px; height: 7px; border-radius: 1px; background: var(--danger); color: white; font: 800 7px/7px monospace; }
+      .sim-belt i { position: absolute; left: -10%; top: 1px; width: 8px; height: 5px; border-radius: 1px; opacity: 0; background: var(--ore); box-shadow: 0 0 5px color-mix(in srgb, var(--ore) 50%, transparent); }
+      .sim-belt i.active { opacity: 1; }
+      @keyframes belt-surface { to { background-position: 9px 0; } }
+      @keyframes belt-jam { 50% { transform: translateX(1px); } }
+      .identity-copy { max-width: 450px; margin: 38px auto 0; color: var(--muted); font-size: 13px; line-height: 1.65; }
+      .cycle-list { display: flex; justify-content: center; flex-wrap: wrap; gap: 7px; margin-top: 20px; }
+      .cycle-list span { padding: 5px 8px; border: 1px solid var(--line); border-radius: 999px; color: var(--muted); font: 500 9px monospace; }
+
+      .prototype-intro { max-width: 740px; margin: -30px 0 38px 180px; color: var(--muted); line-height: 1.65; }
+      .prototype-shell { overflow: hidden; box-shadow: 0 35px 110px #0007; }
+      .prototype-toolbar { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: #131713; }
+      .window-dots { display: flex; gap: 6px; }
+      .window-dots i { width: 7px; height: 7px; border-radius: 50%; background: #4b554c; }
+      .screen-tabs { display: flex; gap: 6px; }
+      .screen-tabs button { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: transparent; color: var(--muted); cursor: pointer; font-size: 11px; }
+      .screen-tabs button.active { border-color: var(--acid); background: var(--acid); color: var(--acid-ink); }
+      .prototype-note { color: var(--muted); font: 500 9px monospace; }
+      .product-screen { min-height: 680px; background: var(--bg); }
+      .product-screen[hidden] { display: none; }
+      .product-topbar { display: flex; justify-content: space-between; align-items: center; width: min(960px, calc(100% - 32px)); margin: auto; padding: 20px 0; }
+      .product-brand { position: relative; padding-bottom: 7px; font-size: 17px; font-weight: 850; letter-spacing: -.04em; }
+      .product-brand::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 3px; border: 1px solid #465047; background: repeating-linear-gradient(90deg, #1c231d 0 5px, #303a31 5px 7px); }
+      .theme-button { width: 35px; height: 35px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); }
+
+      .landing-prototype { width: min(720px, calc(100% - 32px)); margin: 35px auto; text-align: center; }
+      .landing-prototype h3 { margin: 12px 0 18px; font-size: clamp(38px, 6vw, 62px); line-height: .96; letter-spacing: -.065em; }
+      .landing-prototype h3 span { color: var(--muted); }
+      .landing-prototype > p:not(.kicker) { max-width: 600px; margin: 0 auto 26px; color: var(--muted); line-height: 1.6; }
+      .demo-dropzone { min-height: 230px; display: grid; place-content: center; justify-items: center; gap: 8px; width: 100%; border: 1px dashed #657064; border-radius: 22px; background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 90%, var(--acid)), var(--surface)); cursor: pointer; transition: .2s ease; }
+      .demo-dropzone:hover { border-color: var(--acid); transform: translateY(-2px); box-shadow: 0 12px 50px #b8f34a18; }
+      .demo-dropzone i { display: grid; place-items: center; width: 48px; height: 48px; border-radius: 50%; background: var(--acid); color: var(--acid-ink); font: 500 25px monospace; }
+      .demo-dropzone span, .demo-dropzone small { color: var(--muted); }
+      .demo-dropzone small { margin-top: 8px; }
+
+      .report-prototype { width: min(900px, calc(100% - 32px)); margin: 28px auto 55px; }
+      .report-head { display: flex; align-items: end; justify-content: space-between; gap: 20px; }
+      .report-head h3 { margin: 6px 0 0; font-size: clamp(38px, 5vw, 58px); line-height: 1; letter-spacing: -.06em; }
+      .secondary-button { padding: 9px 13px; border: 1px solid var(--line); border-radius: 9px; background: var(--surface); cursor: pointer; }
+      .summary { display: grid; grid-template-columns: repeat(4, 1fr); margin: 28px 0 20px; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+      .summary div { padding: 17px; border-right: 1px solid var(--line); }
+      .summary div:last-child { border: 0; }
+      .summary strong { display: block; font: 500 24px monospace; }
+      .summary span { color: var(--muted); font-size: 9px; text-transform: uppercase; letter-spacing: .08em; }
+      .summary .bad strong { color: var(--danger); }
+      .map-block { overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+      .map-head { display: flex; align-items: center; justify-content: space-between; gap: 15px; padding: 12px 14px; border-bottom: 1px solid var(--line); }
+      .map-head small { color: var(--muted); font: 600 9px monospace; text-transform: uppercase; letter-spacing: .1em; }
+      .map-legend { display: flex; gap: 12px; color: var(--muted); font-size: 9px; }
+      .map-legend span { display: inline-flex; align-items: center; gap: 5px; }
+      .map-legend i { width: 7px; height: 7px; border-radius: 50%; background: var(--acid); }
+      .map-legend .bad { background: var(--danger); }
+      .mock-map { position: relative; height: 260px; overflow: hidden; background: radial-gradient(circle at 30% 40%, #314431 0 2%, transparent 2.5%), linear-gradient(28deg, transparent 45%, #334138 46% 48%, transparent 49%), repeating-linear-gradient(15deg, #17241c 0 18px, #1b2a21 18px 35px); }
+      .mock-map::before, .mock-map::after { content: ""; position: absolute; width: 11px; height: 11px; border: 2px solid var(--bg); border-radius: 50%; box-shadow: 0 0 0 2px currentColor; }
+      .mock-map::before { left: 28%; top: 42%; color: var(--danger); background: var(--danger); }
+      .mock-map::after { right: 22%; bottom: 25%; color: var(--acid); background: var(--acid); }
+      .mock-map.is-live::before, .mock-map.is-live::after { display: none; }
+      .mock-map .leaflet-control-zoom a, .mock-map .leaflet-control-attribution { border-color: var(--line); background: var(--surface); color: var(--text); }
+      .mock-map .leaflet-control-attribution { color: var(--muted); font-size: 8px; }
+      .mock-map .leaflet-control-attribution a { color: var(--acid); }
+      .mock-map .leaflet-tooltip { border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: 0 8px 25px #0008; font: 500 10px monospace; }
+      .filters { display: flex; gap: 7px; margin: 22px 0 12px; overflow-x: auto; }
+      .filters button { padding: 7px 11px; border: 1px solid var(--line); border-radius: 999px; background: transparent; cursor: pointer; font-size: 11px; white-space: nowrap; }
+      .filters button.active { border-color: var(--text); background: var(--text); color: var(--bg); }
+      .demo-lines { display: grid; gap: 10px; }
+      .demo-card { padding: 17px; border: 1px solid var(--line); border-left: 4px solid var(--acid); border-radius: 14px; background: var(--surface); }
+      .demo-card.deficit { border-left-color: var(--danger); }
+      .demo-card[hidden] { display: none; }
+      .demo-card-head { display: flex; justify-content: space-between; gap: 15px; }
+      .demo-card h4 { margin: 3px 0 0; font-size: 20px; }
+      .demo-card small { color: var(--muted); font: 500 9px monospace; text-transform: uppercase; }
+      .status { align-self: start; padding: 5px 8px; border-radius: 999px; color: var(--acid); background: #b8f34a12; font: 500 9px monospace; }
+      .deficit .status { color: var(--danger); background: #ff725e12; }
+      .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 7px; margin-top: 14px; }
+      .metrics div { padding: 10px; border-radius: 8px; background: var(--surface-2); }
+      .metrics span { display: block; color: var(--muted); font-size: 8px; text-transform: uppercase; }
+      .metrics strong { font: 500 15px monospace; }
+      .card-details { margin-top: 12px; border-top: 1px solid var(--line); }
+      .card-details summary { padding-top: 11px; cursor: pointer; font-size: 11px; font-weight: 700; }
+      .card-details p { margin: 9px 0 0; color: var(--muted); font-size: 11px; line-height: 1.6; }
+
+      .disclaimer { display: flex; align-items: flex-start; gap: 16px; margin-top: 20px; padding: 20px; border-color: color-mix(in srgb, var(--warning) 45%, var(--line)); background: color-mix(in srgb, var(--warning) 6%, var(--surface)); }
+      .disclaimer b { flex: none; color: var(--warning); font: 600 11px monospace; }
+      .disclaimer p { margin: 0; color: var(--muted); font-size: 12px; line-height: 1.6; }
+      .dossier-footer { padding: 60px 20px; border-top: 1px solid var(--line); text-align: center; color: var(--muted); font-size: 12px; }
+
+      @media (max-width: 760px) {
+        .site-nav { padding-inline: 12px; }
+        .chapter-head { grid-template-columns: 1fr; gap: 12px; }
+        .pain-grid, .name-layout { grid-template-columns: 1fr; }
+        .flow-steps { grid-template-columns: 1fr; }
+        .flow-step:not(:last-child)::after { right: auto; left: 4px; top: auto; bottom: -4px; transform: rotate(90deg); }
+        .scope-strip { grid-template-columns: 1fr; }
+        .prototype-intro { margin: -25px 0 30px; }
+        .prototype-toolbar { align-items: flex-start; }
+        .prototype-note { display: none; }
+        .product-screen { min-height: 620px; }
+        .summary { grid-template-columns: repeat(2, 1fr); }
+        .summary div:nth-child(2) { border-right: 0; }
+        .summary div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+        .metrics { grid-template-columns: 1fr; }
+        .report-head { align-items: flex-start; flex-direction: column; }
+      }
+
+      @media (prefers-reduced-motion: reduce) {
+        *, *::before, *::after { animation-duration: .01ms !important; animation-iteration-count: 1 !important; transition-duration: .01ms !important; scroll-behavior: auto !important; }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="site-nav">
+      <a class="mini-brand" href="#top">Veinmetry</a>
+      <div>
+        <a href="#problema">01 · Problema</a>
+        <a href="#identidade">02 · Identidade</a>
+        <a href="#produto">03 · Produto</a>
+      </div>
+    </nav>
+
+    <main id="top">
+      <header class="dossier-hero">
+        <p class="kicker">Dossiê de conceito · Julho de 2026</p>
+        <h1>Veinmetry<span>.</span></h1>
+        <p class="hero-lede">Um auditor de recursos para entender o que cada nódulo realmente sustenta — antes que um gargalo silencioso comprometa a fábrica inteira.</p>
+        <div class="hero-meta"><span>Client-side</span><span>Satisfactory</span><span>Save real</span><span>Privacidade local</span><span>Conceito v0.1</span></div>
+      </header>
+
+      <section class="chapter" id="problema">
+        <div class="chapter-head"><span class="chapter-number">PARTE 01</span><h2>A fábrica parece funcionar. <span>Até deixar de funcionar.</span></h2></div>
+        <div class="pain-grid">
+          <article class="statement">
+            <blockquote>Em uma fábrica grande, descobrir se um nódulo sustenta toda a linha exige seguir esteiras, máquinas e divisões <em>manualmente</em>.</blockquote>
+            <small>O problema não é calcular uma receita isolada. É compreender a rede física construída no save.</small>
+          </article>
+          <div class="pain-stack">
+            <article class="pain-card"><b>Gargalos ficam escondidos</b><p>Uma linha pode parecer estável enquanto estoques intermediários mascaram um déficit permanente.</p></article>
+            <article class="pain-card"><b>A auditoria não escala</b><p>Splitters, mergers, clocks e diferentes purezas tornam a conferência manual lenta e sujeita a erros.</p></article>
+            <article class="pain-card"><b>O save é pessoal</b><p>A fábrica representa muitas horas de jogo. O arquivo não deveria precisar sair do computador do jogador.</p></article>
+          </div>
+        </div>
+
+        <article class="solution-flow">
+          <h3>Veinmetry transforma o save em uma resposta acionável.</h3>
+          <div class="flow-steps">
+            <div class="flow-step"><span>01</span><strong>Recebe o .sav</strong><p>O jogador seleciona seu arquivo real.</p></div>
+            <div class="flow-step"><span>02</span><strong>Monta o grafo</strong><p>Esteiras, lifts, divisões e máquinas são conectados.</p></div>
+            <div class="flow-step"><span>03</span><strong>Compara o fluxo</strong><p>Extração efetiva e demanda são calculadas por linha.</p></div>
+            <div class="flow-step"><span>04</span><strong>Expõe o gargalo</strong><p>Déficits, folgas e pontos não rastreáveis ficam visíveis.</p></div>
+          </div>
+        </article>
+
+        <div class="scope-strip">
+          <div><span>Processamento</span><strong>100% no navegador</strong></div>
+          <div><span>Entrada</span><strong>Save real do jogador</strong></div>
+          <div><span>Resultado</span><strong>Balanço por linha física</strong></div>
+        </div>
+      </section>
+
+      <section class="chapter" id="identidade">
+        <div class="chapter-head"><span class="chapter-number">PARTE 02</span><h2>Um nome sobre origem e medida. <span>Uma esteira que explica o produto.</span></h2></div>
+        <div class="name-layout">
+          <article class="name-card">
+            <p class="kicker">Construção do nome</p>
+            <div class="name-equation">
+              <div class="name-part"><b>VEIN</b><p>Veio mineral: o ponto de origem do recurso e o começo de toda linha produtiva.</p></div>
+              <span class="plus">+</span>
+              <div class="name-part"><b>METRY</b><p>Medição: observar, quantificar e transformar fluxo em informação útil.</p></div>
+            </div>
+          </article>
+
+          <article class="identity-stage">
+            <div class="identity-inner">
+              <div class="identity-word">Veinmetry
+                <span class="sim-belt" aria-hidden="true">
+                  <i style="--ore:var(--copper)"></i><i style="--ore:var(--caterium)"></i><i style="--ore:var(--uranium)"></i><i style="--ore:var(--quartz)"></i><i style="--ore:var(--water)"></i><i style="--ore:var(--resin)"></i><i style="--ore:var(--copper)"></i><i style="--ore:var(--caterium)"></i><i style="--ore:var(--uranium)"></i><i style="--ore:var(--quartz)"></i><i style="--ore:var(--water)"></i><i style="--ore:var(--resin)"></i>
+                </span>
+              </div>
+              <p class="identity-copy">O wordmark permanece puro. A esteira compacta é o elemento proprietário: ela demonstra fluxo saudável, acúmulo, recuperação e falta de alimentação sem depender de texto ou idioma.</p>
+              <div class="cycle-list"><span>FLUXO</span><span>GARGALO</span><span>RECUPERAÇÃO</span><span>ESCASSEZ</span><span>REINÍCIO</span></div>
+            </div>
+          </article>
+        </div>
+      </section>
+
+      <section class="chapter" id="produto">
+        <div class="chapter-head"><span class="chapter-number">PARTE 03</span><h2>Duas telas. <span>Do arquivo à decisão.</span></h2></div>
+        <p class="prototype-intro">O protótipo abaixo é clicável. Use as abas para alternar as telas ou clique na área de upload para simular uma análise completa.</p>
+
+        <div class="prototype-shell">
+          <div class="prototype-toolbar">
+            <span class="window-dots"><i></i><i></i><i></i></span>
+            <div class="screen-tabs"><button class="active" data-screen="landing">Entrada</button><button data-screen="report">Relatório carregado</button></div>
+            <span class="prototype-note">PROTÓTIPO INTERATIVO</span>
+          </div>
+
+          <section class="product-screen" id="screen-landing">
+            <header class="product-topbar"><span class="product-brand">Veinmetry</span><button class="theme-button" aria-label="Alternar tema">◐</button></header>
+            <div class="landing-prototype">
+              <p class="kicker">Auditor de recursos · Satisfactory</p>
+              <h3>Seu nódulo dá conta<br><span>da fábrica inteira?</span></h3>
+              <p>Descubra quanto cada linha extrai, o que ela alimenta e onde falta — usando seu save real, sem enviar o arquivo para servidor algum.</p>
+              <button class="demo-dropzone" id="simulate-upload">
+                <i>↓</i><strong>Arraste seu arquivo .sav aqui</strong><span>ou clique para escolher</span><small>Clique para simular o carregamento.</small>
+              </button>
+            </div>
+          </section>
+
+          <section class="product-screen" id="screen-report" hidden>
+            <header class="product-topbar"><span class="product-brand">Veinmetry</span><button class="theme-button" aria-label="Alternar tema">◐</button></header>
+            <div class="report-prototype">
+              <div class="report-head"><div><p class="kicker">Megafactory.sav · build 385279</p><h3>Balanço das linhas</h3></div><button class="secondary-button" id="new-analysis">Analisar outro save</button></div>
+              <div class="summary"><div><strong>18</strong><span>linhas</span></div><div class="bad"><strong>3</strong><span>em déficit</span></div><div><strong>2</strong><span>no limite</span></div><div><strong>12</strong><span>mineradoras</span></div></div>
+              <section class="map-block" aria-label="Mapa dos nódulos utilizados no save">
+                <div class="map-head"><small>Mapa vanilla · nódulos deste save</small><div class="map-legend"><span><i class="bad"></i>Déficit</span><span><i></i>Com folga</span></div></div>
+                <div class="mock-map" id="dossier-map" aria-label="Camada navegável do mapa de Satisfactory com nódulos demonstrativos"></div>
+              </section>
+              <nav class="filters" aria-label="Filtrar linhas"><button class="active" data-filter="all">Todas</button><button data-filter="deficit">Déficit</button><button data-filter="surplus">Com folga</button></nav>
+              <div class="demo-lines">
+                <article class="demo-card deficit" data-status="deficit"><div class="demo-card-head"><div><small>Linha de suprimento</small><h4>Minério de ferro</h4></div><span class="status">Déficit</span></div><div class="metrics"><div><span>Extração</span><strong>240/min</strong></div><div><span>Demanda</span><strong>300/min</strong></div><div><span>Saldo</span><strong style="color:var(--danger)">−60/min</strong></div></div><details class="card-details"><summary>Ver consumidores</summary><p>8 Fundições · Lingote de ferro · 100%. A linha precisa de mais 60 itens/min para sustentar todas as máquinas.</p></details></article>
+                <article class="demo-card surplus" data-status="surplus"><div class="demo-card-head"><div><small>2 nódulos agrupados</small><h4>Minério de cobre</h4></div><span class="status">Com folga</span></div><div class="metrics"><div><span>Extração</span><strong>360/min</strong></div><div><span>Demanda</span><strong>270/min</strong></div><div><span>Saldo</span><strong style="color:var(--acid)">+90/min</strong></div></div><details class="card-details"><summary>Ver origens</summary><p>Mineradora Mk.2 normal · 120/min. Mineradora Mk.3 pura · 240/min.</p></details></article>
+                <article class="demo-card deficit" data-status="deficit"><div class="demo-card-head"><div><small>Linha de suprimento</small><h4>Caterium</h4></div><span class="status">Déficit</span></div><div class="metrics"><div><span>Extração</span><strong>120/min</strong></div><div><span>Demanda</span><strong>150/min</strong></div><div><span>Saldo</span><strong style="color:var(--danger)">−30/min</strong></div></div><details class="card-details"><summary>Ver sugestão</summary><p>Aumente o clock da mineradora ou reduza 20% da demanda conectada a esta linha.</p></details></article>
+              </div>
+            </div>
+          </section>
+        </div>
+
+        <aside class="disclaimer"><b>EM DESENVOLVIMENTO</b><p>As telas apresentadas neste dossiê representam a direção atual do produto. Estrutura, textos, métricas, interações e identidade visual ainda podem mudar durante o desenvolvimento e a validação com jogadores.</p></aside>
+      </section>
+    </main>
+
+    <footer class="dossier-footer">Veinmetry · Dossiê conceitual · Construído para encontrar gargalos antes que eles encontrem você.</footer>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+    <script>
+      const screenButtons = document.querySelectorAll('[data-screen]')
+      const screens = { landing: document.querySelector('#screen-landing'), report: document.querySelector('#screen-report') }
+      let dossierMap
+
+      function ensureDossierMap() {
+        const container = document.querySelector('#dossier-map')
+        if (!window.L || !container) return
+
+        if (!dossierMap) {
+          const mapSize = 40960
+          const mapZoom = 8
+          dossierMap = L.map(container, { attributionControl: false, crs: L.CRS.Simple, maxBoundsViscosity: 1, minZoom: 4, maxZoom: 11 })
+          const innerBounds = L.latLngBounds(
+            dossierMap.unproject([4096, 36864], mapZoom),
+            dossierMap.unproject([36864, 4096], mapZoom),
+          )
+          dossierMap.setMaxBounds(innerBounds)
+          L.tileLayer('https://static.satisfactory-calculator.com/imgMap/realisticLayer/Stable/{z}/{x}/{y}.png?v=1783579096', {
+            attribution: 'Map tiles © Satisfactory Calculator / Coffee Stain Studios',
+            maxNativeZoom: 8,
+            maxZoom: 11,
+            minNativeZoom: 3,
+            minZoom: 4,
+            noWrap: true,
+            referrerPolicy: 'no-referrer',
+            tileSize: 256,
+          }).addTo(dossierMap)
+          L.control.attribution({ prefix: false }).addTo(dossierMap)
+          dossierMap.fitBounds(innerBounds, { padding: [12, 12] })
+
+          const markers = [
+            { pixel: [15000, 20500], color: '#ff725e', label: 'Minério de ferro · Déficit · −60/min' },
+            { pixel: [22500, 16800], color: '#b8f34a', label: 'Minério de cobre · Com folga · +90/min' },
+            { pixel: [27700, 24800], color: '#ff725e', label: 'Caterium · Déficit · −30/min' },
+            { pixel: [19000, 28200], color: '#b8f34a', label: 'Calcário · Com folga · +45/min' },
+          ]
+          for (const marker of markers) {
+            L.circleMarker(dossierMap.unproject(marker.pixel, mapZoom), { color: '#101411', fillColor: marker.color, fillOpacity: 1, radius: 6, weight: 2 })
+              .bindTooltip(marker.label, { direction: 'auto', opacity: .96 })
+              .addTo(dossierMap)
+          }
+          container.classList.add('is-live')
+        }
+        requestAnimationFrame(() => dossierMap.invalidateSize())
+      }
+
+      function showScreen(name) {
+        for (const [key, screen] of Object.entries(screens)) screen.hidden = key !== name
+        for (const button of screenButtons) button.classList.toggle('active', button.dataset.screen === name)
+        if (name === 'report') ensureDossierMap()
+      }
+
+      for (const button of screenButtons) button.addEventListener('click', () => showScreen(button.dataset.screen))
+      document.querySelector('#simulate-upload').addEventListener('click', () => showScreen('report'))
+      document.querySelector('#new-analysis').addEventListener('click', () => showScreen('landing'))
+
+      const filterButtons = document.querySelectorAll('[data-filter]')
+      for (const button of filterButtons) {
+        button.addEventListener('click', () => {
+          for (const candidate of filterButtons) candidate.classList.toggle('active', candidate === button)
+          for (const card of document.querySelectorAll('.demo-card')) card.hidden = button.dataset.filter !== 'all' && card.dataset.status !== button.dataset.filter
+        })
+      }
+
+      const belt = document.querySelector('.sim-belt')
+      const sampleElements = [...belt.querySelectorAll('i')]
+      const samples = []
+      const phases = [
+        { name: 'empty', duration: 1000, speed: 0, spawn: Infinity },
+        { name: 'flow', duration: 4400, speed: .04, spawn: 620 },
+        { name: 'jam', duration: 2400, speed: .04, spawn: 390, blocked: true },
+        { name: 'release', duration: 900, speed: .03, spawn: 520 },
+        { name: 'jam', duration: 1600, speed: .04, spawn: 410, blocked: true },
+        { name: 'recovered', duration: 4200, speed: .04, spawn: 620 },
+        { name: 'starved', duration: 7600, speed: .04, spawn: 700 },
+      ]
+      let phaseIndex = 0, phaseStart = 0, previousFrame = 0, lastSpawn = 0
+
+      function clearBelt() {
+        samples.splice(0)
+        for (const element of sampleElements) { element.classList.remove('active'); element.style.left = '-10%' }
+      }
+
+      function spawn() {
+        const rear = samples.reduce((value, sample) => Math.min(value, sample.x), Infinity)
+        if (rear < 2) return
+        const element = sampleElements.find((candidate) => !candidate.classList.contains('active'))
+        if (!element) return
+        const sample = { element, x: -5 }
+        element.classList.add('active'); element.style.left = '-5%'; samples.push(sample)
+      }
+
+      function beginPhase(time) {
+        phaseStart = time; lastSpawn = time
+        const phase = phases[phaseIndex]
+        belt.className = `sim-belt ${phase.blocked ? 'jammed' : phase.name === 'empty' ? '' : 'flowing'}`
+        if (phase.name === 'empty') clearBelt()
+        if (phase.name === 'flow') spawn()
+      }
+
+      function animateBelt(time) {
+        if (!phaseStart) beginPhase(time)
+        const phase = phases[phaseIndex]
+        const elapsed = time - phaseStart
+        const delta = Math.min(time - (previousFrame || time), 40)
+        previousFrame = time
+        let interval = phase.spawn
+        if (phase.name === 'starved') { const progress = elapsed / phase.duration; interval = progress > .45 ? Infinity : 700 + progress * 5200 }
+        if (time - lastSpawn >= interval) { spawn(); lastSpawn = time }
+
+        samples.sort((a, b) => b.x - a.x)
+        for (let index = 0; index < samples.length; index += 1) {
+          const sample = samples[index]
+          let limit = Infinity
+          if (phase.blocked) limit = index === 0 ? (sample.x > 93 ? Infinity : 93) : samples[index - 1].x - 8.4
+          sample.x = Math.min(sample.x + phase.speed * delta, limit)
+          sample.element.style.left = `${sample.x}%`
+        }
+        for (let index = samples.length - 1; index >= 0; index -= 1) if (samples[index].x > 106) { samples[index].element.classList.remove('active'); samples.splice(index, 1) }
+
+        if (elapsed >= phase.duration) { phaseIndex = (phaseIndex + 1) % phases.length; beginPhase(time) }
+        requestAnimationFrame(animateBelt)
+      }
+
+      if (!matchMedia('(prefers-reduced-motion: reduce)').matches) requestAnimationFrame(animateBelt)
+      else sampleElements.slice(0, 4).forEach((element, index) => { element.classList.add('active'); element.style.left = `${15 + index * 22}%` })
+    </script>
+  </body>
+</html>
