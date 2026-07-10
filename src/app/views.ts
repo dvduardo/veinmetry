@@ -1,12 +1,19 @@
 import type { AnalysisResult, LineBalance } from '../types'
 import { escapeHtml, number, statusText } from './format'
 
+function brandMarkup(): string {
+  return `
+    <span class="brand-text">Veinmetry</span>
+    <span class="brand-belt is-empty" aria-hidden="true">
+      <i style="--ore:#d47615;--i:0"></i><i style="--ore:#fdcc48;--i:1"></i><i style="--ore:#88d288;--i:2"></i><i style="--ore:#f177b5;--i:3"></i><i style="--ore:#3984bf;--i:4"></i><i style="--ore:#9b55bf;--i:5"></i><i style="--ore:#d47615;--i:6"></i><i style="--ore:#fdcc48;--i:7"></i><i style="--ore:#88d288;--i:8"></i><i style="--ore:#f177b5;--i:9"></i><i style="--ore:#3984bf;--i:10"></i><i style="--ore:#9b55bf;--i:11"></i>
+    </span>`
+}
+
 export function landingView(baseUrl: string): string {
   return `
     <header class="topbar">
       <a class="brand" href="${baseUrl}" aria-label="Veinmetry, início">
-        <span class="brand-mark" aria-hidden="true"></span>
-        <span>Veinmetry</span>
+        ${brandMarkup()}
       </a>
       <button class="theme-toggle" type="button" aria-label="Alternar tema" title="Alternar tema">◐</button>
     </header>
@@ -21,9 +28,10 @@ export function landingView(baseUrl: string): string {
         <span>ou clique para escolher</span>
         <small>O processamento acontece somente neste navegador.</small>
       </label>
-      <div class="scope-note">
-        <span>V1</span>
-        <p>Analisa esteiras, lifts, splitters, mergers e containers. Trens, veículos, drones e fluidos ainda não entram no balanço.</p>
+      <div class="privacy-strip" aria-label="Escopo e privacidade">
+        <div><span>Processamento</span><strong>100% no navegador</strong></div>
+        <div><span>Entrada</span><strong>Save real do jogador</strong></div>
+        <div><span>Escopo v1</span><strong>Esteiras, lifts e máquinas</strong></div>
       </div>
     </section>
     <footer>Feito para encontrar gargalos antes que eles encontrem você.</footer>
@@ -33,9 +41,10 @@ export function landingView(baseUrl: string): string {
 export function loadingView(fileName: string): string {
   return `
     <section class="loading-screen">
+      <div class="brand loading-brand" aria-label="Veinmetry">${brandMarkup()}</div>
       <div class="loader-node" aria-hidden="true"></div>
       <p class="eyebrow">Analisando ${escapeHtml(fileName)}</p>
-      <h1>Seguindo cada esteira…</h1>
+      <h1>Seguindo a rede física do save.</h1>
       <p id="progress-message">Preparando os dados do jogo.</p>
       <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"><span></span></div>
     </section>
@@ -56,12 +65,12 @@ export function reportView(result: AnalysisResult): string {
 
   return `
     <header class="topbar report-topbar">
-      <button class="brand brand-button" type="button" aria-label="Nova análise"><span class="brand-mark"></span><span>Veinmetry</span></button>
+      <button class="brand brand-button" type="button" aria-label="Nova análise">${brandMarkup()}</button>
       <button class="theme-toggle" type="button" aria-label="Alternar tema">◐</button>
     </header>
     <section class="report-shell">
       <div class="report-heading">
-        <div><p class="eyebrow">${escapeHtml(result.saveName)} · build ${result.buildVersion}</p><h1>Balanço das linhas</h1></div>
+        <div><p class="eyebrow">${escapeHtml(result.saveName)} · build ${result.buildVersion}</p><h1>Balanço <span>das linhas</span></h1></div>
         <button class="new-file" type="button">Analisar outro save</button>
       </div>
       <div class="summary-strip">
@@ -75,6 +84,7 @@ export function reportView(result: AnalysisResult): string {
       <nav class="filters" aria-label="Filtrar linhas">
         <button class="active" data-filter="all">Todas</button>
         <button data-filter="deficit">Déficit</button>
+        <button data-filter="balanced">No limite</button>
         <button data-filter="surplus">Com folga</button>
         <button data-filter="untraceable">Não rastreáveis</button>
       </nav>
