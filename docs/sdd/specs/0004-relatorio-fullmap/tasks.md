@@ -18,6 +18,6 @@
 - [x] Subir `npm run dev` e esperar David validar visualmente no browser (validado por David em 2026-07-10)
 - [x] Se for visual: apos o OK do David, parar o servidor
 - [x] Preparar commits: se houver varios assuntos, separar em commits distintos, sempre com mensagem clara
-- [ ] Fazer commit e push da branch
-- [ ] Abrir PR da branch para `main` no GitHub
-- [ ] Somente depois do PR aberto, marcar a spec como `Done`
+- [x] Fazer commit e push da branch
+- [x] Abrir PR da branch para `main` no GitHub (#5)
+- [x] Somente depois do PR aberto, marcar a spec como `Done`

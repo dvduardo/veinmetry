@@ -1,7 +1,7 @@
 # Spec: Relatorio Full-Map como Tela Padrao
 
-> Status: Approved
-> Spec e plano aprovados por David em 2026-07-10. Implementacao validada visualmente por David em 2026-07-10; aguardando PR para fechar como Done.
+> Status: Done
+> Spec e plano aprovados por David em 2026-07-10. Implementacao validada visualmente por David em 2026-07-10. PR aberto em 2026-07-10.
 
 ## Contexto / Problema
 
