@@ -1,0 +1,271 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spec 0002 - Mockups Visuais</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" crossorigin="anonymous" />
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101411;
+        --surface: #171c18;
+        --surface-2: #202620;
+        --text: #edf2eb;
+        --muted: #95a097;
+        --line: #323a33;
+        --acid: #b8f34a;
+        --acid-ink: #192208;
+        --danger: #ff725e;
+        --warning: #efb65b;
+        --copper: #d47615;
+        --quartz: #f177b5;
+        --water: #3984bf;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; background: var(--bg); }
+      button { font: inherit; color: inherit; }
+      .mock-nav { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 18px; min-height: 58px; padding: 0 max(16px, calc((100vw - 1180px) / 2)); border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(16px); }
+      .mock-nav strong { letter-spacing: 0; }
+      .mock-nav div { display: flex; gap: 8px; }
+      .mock-nav a { color: var(--muted); text-decoration: none; font-size: 12px; }
+      .screen { width: min(1120px, calc(100% - 32px)); margin: 46px auto 96px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: 0 34px 100px #0007; }
+      .screen-label { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: #131713; color: var(--muted); font: 600 10px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; text-transform: uppercase; letter-spacing: .12em; }
+      .topbar { display: flex; justify-content: space-between; align-items: center; width: min(980px, calc(100% - 36px)); margin: auto; padding: 22px 0; }
+      .brand { position: relative; display: inline-block; padding-bottom: 8px; font-size: 20px; font-weight: 850; letter-spacing: 0; }
+      .brand::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 5px; border: 1px solid #465047; border-radius: 2px; background: repeating-linear-gradient(90deg, #1c231d 0 7px, #303a31 7px 9px); box-shadow: inset 0 -1px #0b0e0c; }
+      .theme { display: grid; place-items: center; width: 38px; height: 38px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); }
+      .kicker { margin: 0; color: var(--acid); text-transform: uppercase; letter-spacing: .16em; font: 600 11px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .landing { width: min(760px, calc(100% - 36px)); margin: 42px auto 70px; text-align: center; }
+      .landing h1 { margin: 12px 0 20px; font-size: 64px; line-height: .95; letter-spacing: 0; }
+      .landing h1 span, .report h1 span { color: var(--muted); }
+      .lede { max-width: 650px; margin: 0 auto 30px; color: var(--muted); font-size: 19px; line-height: 1.6; }
+      .dropzone { min-height: 236px; display: grid; place-content: center; justify-items: center; gap: 9px; border: 1px dashed #657064; border-radius: 18px; background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 90%, var(--acid)), var(--surface)); outline: 2px solid transparent; outline-offset: 4px; }
+      .dropzone.dragging { border-color: var(--acid); outline-color: color-mix(in srgb, var(--acid) 50%, transparent); box-shadow: 0 16px 60px #b8f34a18; transform: translateY(-2px); }
+      .drop-icon { display: grid; place-items: center; width: 52px; height: 52px; border-radius: 50%; background: var(--acid); color: var(--acid-ink); font: 600 28px ui-monospace, monospace; }
+      .dropzone span, .dropzone small { color: var(--muted); }
+      .privacy-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; margin-top: 22px; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--line); text-align: left; }
+      .privacy-strip div { padding: 18px; background: var(--surface); }
+      .privacy-strip span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .1em; }
+      .privacy-strip strong { display: block; margin-top: 6px; font-size: 15px; }
+      .loading-band { display: flex; align-items: center; justify-content: center; gap: 18px; padding: 18px; border-top: 1px solid var(--line); background: color-mix(in srgb, var(--surface) 70%, transparent); color: var(--muted); font-size: 13px; }
+      .loader-node { width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 50%; position: relative; }
+      .loader-node::before, .loader-node::after { content: ""; position: absolute; border-radius: 50%; background: var(--acid); }
+      .loader-node::before { width: 12px; height: 12px; left: 14px; top: 14px; }
+      .loader-node::after { width: 6px; height: 6px; left: -3px; top: 18px; box-shadow: 40px 0 var(--acid); }
+      .report { width: min(960px, calc(100% - 36px)); margin: 30px auto 64px; }
+      .report-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 24px; }
+      .report h1 { margin: 7px 0 0; font-size: 58px; line-height: .96; letter-spacing: 0; }
+      .secondary { padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: var(--surface); white-space: nowrap; }
+      .summary { display: grid; grid-template-columns: repeat(4, 1fr); margin: 28px 0 22px; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--surface); }
+      .summary div { padding: 18px; border-right: 1px solid var(--line); }
+      .summary div:last-child { border-right: 0; }
+      .summary strong { display: block; font: 500 28px ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .summary span { color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+      .summary .bad strong { color: var(--danger); }
+      .map-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
+      .map-head { display: flex; justify-content: space-between; align-items: center; gap: 18px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+      .map-head h2 { margin: 4px 0 0; font-size: 20px; letter-spacing: 0; }
+      .legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px 14px; color: var(--muted); font-size: 11px; }
+      .legend span { display: inline-flex; align-items: center; gap: 6px; }
+      .legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--acid); }
+      .legend .bad { background: var(--danger); }
+      .legend .warn { background: var(--warning); }
+      .legend .unknown { background: var(--surface); border: 1px solid var(--warning); }
+      .mock-map { min-height: 360px; background: #0e1511; }
+      .mock-map .leaflet-control-layers, .mock-map .leaflet-control-zoom a, .mock-map .leaflet-control-attribution { background: var(--surface); color: var(--text); border-color: var(--line); }
+      .mock-map .leaflet-control-layers { border: 1px solid var(--line); box-shadow: 0 10px 30px #0005; }
+      .mock-map .leaflet-control-layers label { color: var(--text); font-size: 12px; }
+      .mock-map .leaflet-control-zoom a:hover { background: var(--surface-2); color: var(--text); }
+      .mock-map .leaflet-control-attribution { color: var(--muted); font-size: 9px; }
+      .mock-map .leaflet-control-attribution a { color: var(--acid); }
+      .mock-map .leaflet-tooltip { border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: 0 8px 25px #0008; font: 500 11px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .mock-marker { border: 0; background: transparent; }
+      .mock-marker span { display: block; width: 18px; height: 18px; border: 2px solid var(--bg); border-radius: 50%; background: var(--acid); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acid) 70%, transparent), 0 7px 18px #0009; }
+      .mock-marker-deficit span { background: var(--danger); box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 70%, transparent), 0 7px 18px #0009; }
+      .mock-marker-balanced span { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 70%, transparent), 0 7px 18px #0009; }
+      .mock-marker-untraceable span { background: var(--surface); border-color: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 70%, transparent), 0 7px 18px #0009; }
+      .filters { display: flex; gap: 8px; margin: 24px 0 14px; overflow-x: auto; }
+      .filters button { padding: 8px 13px; border: 1px solid var(--line); border-radius: 999px; background: transparent; white-space: nowrap; font-size: 12px; }
+      .filters .active { border-color: var(--text); background: var(--text); color: var(--bg); }
+      .line-list { display: grid; gap: 12px; }
+      .line-card { border: 1px solid var(--line); border-left: 4px solid var(--acid); border-radius: 12px; background: var(--surface); padding: 18px; }
+      .line-card.deficit { border-left-color: var(--danger); }
+      .line-card.balanced { border-left-color: var(--warning); }
+      .line-card.untraceable { border-left-color: var(--warning); }
+      .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+      .card-head h3 { margin: 3px 0 0; font-size: 22px; letter-spacing: 0; }
+      .card-kicker { margin: 0; color: var(--muted); font: 600 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+      .pill { flex: none; padding: 6px 9px; border-radius: 999px; color: var(--acid); background: color-mix(in srgb, var(--acid) 10%, transparent); font: 600 10px ui-monospace, monospace; }
+      .deficit .pill { color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); }
+      .balanced .pill, .untraceable .pill { color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, transparent); }
+      .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 15px 0; }
+      .metrics div { padding: 12px; border-radius: 8px; background: var(--surface-2); }
+      .metrics span { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+      .metrics strong { font: 500 18px ui-monospace, monospace; }
+      .details { border-top: 1px solid var(--line); padding-top: 12px; color: var(--muted); font-size: 13px; line-height: 1.55; }
+      .suggestion { margin: 12px 0 0; padding: 11px 12px; border-radius: 8px; color: var(--acid); background: color-mix(in srgb, var(--acid) 8%, transparent); font-size: 13px; }
+
+      @media (max-width: 720px) {
+        .mock-nav { align-items: flex-start; flex-direction: column; padding-block: 12px; }
+        .topbar, .landing, .report { width: min(100% - 24px, 960px); }
+        .screen { width: min(100% - 16px, 1120px); margin-top: 20px; }
+        .landing h1 { font-size: 42px; }
+        .lede { font-size: 16px; }
+        .privacy-strip { grid-template-columns: 1fr; }
+        .report-head { align-items: flex-start; flex-direction: column; }
+        .report h1 { font-size: 40px; }
+        .summary { grid-template-columns: repeat(2, 1fr); }
+        .summary div:nth-child(2) { border-right: 0; }
+        .summary div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+        .map-head { align-items: flex-start; flex-direction: column; }
+        .legend { justify-content: flex-start; }
+        .metrics { grid-template-columns: 1fr; }
+        .card-head { flex-direction: column; }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="mock-nav">
+      <strong>Spec 0002 - Ajustes Visuais do Dossie</strong>
+      <div><a href="#entrada">Entrada</a><a href="#relatorio">Relatorio carregado</a></div>
+    </nav>
+
+    <section class="screen" id="entrada">
+      <div class="screen-label"><span>Tela 01</span><span>Entrada + upload local</span></div>
+      <header class="topbar"><span class="brand">Veinmetry</span><button class="theme" type="button" aria-label="Alternar tema">◐</button></header>
+      <main class="landing">
+        <p class="kicker">Auditor de recursos · Satisfactory</p>
+        <h1>Seu nodulo da conta<br><span>da fabrica inteira?</span></h1>
+        <p class="lede">Descubra quanto cada linha extrai, o que ela alimenta e onde falta usando seu save real, sem enviar o arquivo para servidor algum.</p>
+        <div class="dropzone dragging" role="button" tabindex="0">
+          <span class="drop-icon">↓</span>
+          <strong>Arraste seu arquivo .sav aqui</strong>
+          <span>ou clique para escolher</span>
+          <small>Arquivo detectado: Megafactory.sav</small>
+        </div>
+        <div class="privacy-strip" aria-label="Escopo e privacidade">
+          <div><span>Processamento</span><strong>100% no navegador</strong></div>
+          <div><span>Entrada</span><strong>Save real do jogador</strong></div>
+          <div><span>Escopo v1</span><strong>Esteiras, lifts e maquinas</strong></div>
+        </div>
+      </main>
+      <div class="loading-band"><span class="loader-node" aria-hidden="true"></span><span>Carregamento: seguindo a rede fisica do save, mineradora por mineradora.</span></div>
+    </section>
+
+    <section class="screen" id="relatorio">
+      <div class="screen-label"><span>Tela 02</span><span>Relatorio carregado</span></div>
+      <header class="topbar"><span class="brand">Veinmetry</span><button class="theme" type="button" aria-label="Alternar tema">◐</button></header>
+      <main class="report">
+        <div class="report-head">
+          <div><p class="kicker">Megafactory.sav · build 385279</p><h1>Balanço <span>das linhas</span></h1></div>
+          <button class="secondary" type="button">Analisar outro save</button>
+        </div>
+        <section class="summary" aria-label="Resumo da analise">
+          <div><strong>18</strong><span>linhas</span></div>
+          <div class="bad"><strong>3</strong><span>em deficit</span></div>
+          <div><strong>2</strong><span>no limite</span></div>
+          <div><strong>12</strong><span>mineradoras</span></div>
+        </section>
+        <section class="map-card" aria-label="Mapa dos nodulos usados no save">
+          <div class="map-head">
+            <div><p class="kicker">Mapa vanilla · marcadores demonstrativos</p><h2>Nodulos usados por este save</h2></div>
+            <div class="legend"><span><i class="bad"></i>Deficit</span><span><i class="warn"></i>No limite</span><span><i></i>Com folga</span><span><i class="unknown"></i>Nao rastreavel</span></div>
+          </div>
+          <div class="mock-map" id="satisfactory-map" aria-label="Mapa navegavel de Satisfactory com nodulos demonstrativos"></div>
+        </section>
+        <nav class="filters" aria-label="Filtrar linhas"><button class="active">Todas</button><button>Deficit</button><button>No limite</button><button>Com folga</button><button>Nao rastreaveis</button></nav>
+        <section class="line-list">
+          <article class="line-card deficit">
+            <div class="card-head"><div><p class="card-kicker">Linha de suprimento</p><h3>Minerio de ferro</h3></div><span class="pill">Deficit</span></div>
+            <div class="metrics"><div><span>Extracao</span><strong>240/min</strong></div><div><span>Demanda</span><strong>300/min</strong></div><div><span>Saldo</span><strong style="color:var(--danger)">-60/min</strong></div></div>
+            <p class="details">Origens: Mineradora Mk.2 normal · 100%. Consumidores: 8 fundicoes em Lingote de ferro. Aviso: a demanda permanente supera a extracao efetiva.</p>
+            <p class="suggestion">Sugestao: adicionar 60/min de minerio ou reduzir a demanda conectada nesta linha.</p>
+          </article>
+          <article class="line-card surplus">
+            <div class="card-head"><div><p class="card-kicker">2 nodulos agrupados</p><h3>Minerio de cobre</h3></div><span class="pill">Com folga</span></div>
+            <div class="metrics"><div><span>Extracao</span><strong>360/min</strong></div><div><span>Demanda</span><strong>270/min</strong></div><div><span>Saldo</span><strong style="color:var(--acid)">+90/min</strong></div></div>
+            <p class="details">Origens agrupadas por merger. A linha tem folga e pode alimentar uma expansao pequena sem novo nodulo.</p>
+          </article>
+          <article class="line-card balanced">
+            <div class="card-head"><div><p class="card-kicker">Linha de suprimento</p><h3>Calcario</h3></div><span class="pill">No limite</span></div>
+            <div class="metrics"><div><span>Extracao</span><strong>120/min</strong></div><div><span>Demanda</span><strong>120/min</strong></div><div><span>Saldo</span><strong style="color:var(--warning)">0/min</strong></div></div>
+            <p class="details">Fluxo saudavel, mas sem margem. Qualquer aumento de clock nos consumidores cria deficit.</p>
+          </article>
+        </section>
+      </main>
+    </section>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" crossorigin="anonymous"></script>
+    <script>
+      const mapContainer = document.querySelector('#satisfactory-map')
+      if (window.L && mapContainer) {
+        const scimMap = {
+          build: 'Stable',
+          version: 1783579096,
+          backgroundSize: 40960,
+          zoomRatio: 8,
+          innerMin: 4096,
+          innerMax: 36864,
+        }
+
+        const map = L.map(mapContainer, {
+          attributionControl: false,
+          crs: L.CRS.Simple,
+          maxBoundsViscosity: 1,
+          minZoom: 4,
+          maxZoom: 12,
+        })
+        const innerBounds = L.latLngBounds(
+          map.unproject([scimMap.innerMin, scimMap.innerMax], scimMap.zoomRatio),
+          map.unproject([scimMap.innerMax, scimMap.innerMin], scimMap.zoomRatio),
+        )
+        const tileLayer = (layer) => L.tileLayer(
+          `https://static.satisfactory-calculator.com/imgMap/${layer}/${scimMap.build}/{z}/{x}/{y}.png?v=${scimMap.version}`,
+          {
+            attribution: 'Map tiles © Satisfactory Calculator / Coffee Stain Studios',
+            maxNativeZoom: 8,
+            maxZoom: 12,
+            minNativeZoom: 3,
+            minZoom: 4,
+            noWrap: true,
+            referrerPolicy: 'no-referrer',
+            tileSize: 256,
+          },
+        )
+        const realistic = tileLayer('realisticLayer')
+        const game = tileLayer('gameLayer')
+
+        map.setMaxBounds(innerBounds)
+        realistic.addTo(map)
+        L.control.layers({ Realistic: realistic, Game: game }, undefined, { position: 'topright' }).addTo(map)
+        L.control.attribution({ prefix: false }).addTo(map)
+        map.fitBounds(innerBounds, { padding: [12, 12] })
+
+        const markerIcon = (status) => L.divIcon({
+          className: `mock-marker mock-marker-${status}`,
+          html: '<span></span>',
+          iconAnchor: [9, 9],
+          iconSize: [18, 18],
+        })
+        const markers = [
+          { pixel: [15000, 20500], status: 'deficit', label: 'Minerio de ferro · Deficit · -60/min' },
+          { pixel: [22500, 16800], status: 'surplus', label: 'Minerio de cobre · Com folga · +90/min' },
+          { pixel: [19000, 28200], status: 'balanced', label: 'Calcario · No limite · 0/min' },
+          { pixel: [27700, 24800], status: 'deficit', label: 'Caterium · Deficit · -30/min' },
+        ]
+        for (const marker of markers) {
+          L.marker(map.unproject(marker.pixel, scimMap.zoomRatio), {
+            icon: markerIcon(marker.status),
+            keyboard: true,
+            title: marker.label,
+          }).bindTooltip(marker.label, { direction: 'auto', opacity: 0.96 }).addTo(map)
+        }
+        requestAnimationFrame(() => map.invalidateSize())
+      }
+    </script>
+  </body>
+</html>

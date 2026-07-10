@@ -3,6 +3,7 @@ import { initializeResourceMap } from './map'
 import { errorView, landingView, loadingView, reportView } from './views'
 
 let gameDataPromise: Promise<GameData> | undefined
+let stopBrandBeltAnimations: (() => void) | undefined
 
 export function startApp(app: HTMLElement): void {
   function loadGameData(): Promise<GameData> {
@@ -14,8 +15,10 @@ export function startApp(app: HTMLElement): void {
   }
 
   function landing(): void {
+    stopBrandBeltAnimations?.()
     app.innerHTML = landingView(import.meta.env.BASE_URL)
     bindTheme()
+    stopBrandBeltAnimations = startBrandBeltAnimations()
     const input = document.querySelector<HTMLInputElement>('#file-input')!
     const dropzone = document.querySelector<HTMLElement>('.dropzone')!
     input.addEventListener('change', () => input.files?.[0] && void analyzeFile(input.files[0]))
@@ -46,7 +49,9 @@ export function startApp(app: HTMLElement): void {
   }
 
   function loading(fileName: string): void {
+    stopBrandBeltAnimations?.()
     app.innerHTML = loadingView(fileName)
+    stopBrandBeltAnimations = startBrandBeltAnimations()
   }
 
   function setProgress(progress: number, message: string): void {
@@ -81,8 +86,10 @@ export function startApp(app: HTMLElement): void {
   }
 
   function renderReport(result: AnalysisResult): void {
+    stopBrandBeltAnimations?.()
     app.innerHTML = reportView(result)
     bindTheme()
+    stopBrandBeltAnimations = startBrandBeltAnimations()
     document.querySelectorAll('.brand-button, .new-file').forEach((button) => button.addEventListener('click', landing))
     document.querySelectorAll<HTMLButtonElement>('.filters button').forEach((button) => {
       button.addEventListener('click', () => {
@@ -98,9 +105,149 @@ export function startApp(app: HTMLElement): void {
   }
 
   function showError(message: string): void {
+    stopBrandBeltAnimations?.()
     app.innerHTML = errorView(message)
+    stopBrandBeltAnimations = undefined
     document.querySelector('.error-screen button')?.addEventListener('click', landing)
   }
 
   landing()
+}
+
+interface BeltSample {
+  element: HTMLElement
+  x: number
+}
+
+interface BeltPhase {
+  name: 'empty' | 'steady' | 'jam' | 'release' | 'recovered' | 'starved'
+  duration: number
+  speed: number
+  spawn: number
+  blocked?: boolean
+}
+
+function startBrandBeltAnimations(): () => void {
+  const belts = Array.from(document.querySelectorAll<HTMLElement>('.brand-belt'))
+  const stops = belts.map(startBrandBeltAnimation)
+  return () => stops.forEach((stop) => stop())
+}
+
+function startBrandBeltAnimation(belt: HTMLElement): () => void {
+  const oreSamples = Array.from(belt.querySelectorAll<HTMLElement>('i'))
+  const activeSamples: BeltSample[] = []
+  const minimumGap = 8.2
+  const phases: BeltPhase[] = [
+    { name: 'empty', duration: 1200, speed: 0, spawn: Infinity },
+    { name: 'steady', duration: 5200, speed: 0.045, spawn: 650 },
+    { name: 'jam', duration: 2800, speed: 0.045, spawn: 420, blocked: true },
+    { name: 'release', duration: 950, speed: 0.032, spawn: 520 },
+    { name: 'jam', duration: 1900, speed: 0.045, spawn: 420, blocked: true },
+    { name: 'release', duration: 1100, speed: 0.034, spawn: 540 },
+    { name: 'recovered', duration: 5200, speed: 0.045, spawn: 650 },
+    { name: 'starved', duration: 9000, speed: 0.045, spawn: 700 },
+  ]
+  let phaseIndex = 0
+  let phaseStarted = 0
+  let lastFrame = 0
+  let lastSpawn = 0
+  let frame = 0
+  let stopped = false
+
+  function clearBelt(): void {
+    activeSamples.splice(0)
+    for (const sample of oreSamples) {
+      sample.classList.remove('active')
+      sample.style.left = '-10px'
+    }
+  }
+
+  function spawnSample(): void {
+    const rear = activeSamples.reduce((lowest, sample) => Math.min(lowest, sample.x), Infinity)
+    if (rear < minimumGap - 6) return
+    const element = oreSamples.find((sample) => !sample.classList.contains('active'))
+    if (!element) return
+    const sample = { element, x: -6 }
+    element.style.left = `${sample.x}%`
+    element.classList.add('active')
+    activeSamples.push(sample)
+  }
+
+  function beginPhase(now: number): void {
+    phaseStarted = now
+    lastSpawn = now
+    const phase = phases[phaseIndex]
+    if (!phase) return
+    belt.className = `brand-belt ${phase.blocked ? 'is-jammed' : phase.name === 'empty' ? 'is-empty' : 'is-flowing'}`
+    if (phase.name === 'empty') clearBelt()
+    if (phase.name === 'steady') spawnSample()
+  }
+
+  function currentSpawnInterval(phase: BeltPhase, elapsed: number): number {
+    if (phase.name !== 'starved') return phase.spawn
+    const progress = elapsed / phase.duration
+    if (progress > 0.46) return Infinity
+    return 700 + (progress / 0.46) * 2400
+  }
+
+  function moveSamples(distance: number, blocked: boolean): void {
+    activeSamples.sort((a, b) => b.x - a.x)
+    for (let index = 0; index < activeSamples.length; index += 1) {
+      const sample = activeSamples[index]
+      if (!sample) continue
+      let limit = Infinity
+      if (blocked) {
+        const previousSample = activeSamples[index - 1]
+        limit = index === 0 || !previousSample ? (sample.x > 92 ? Infinity : 92) : previousSample.x - minimumGap
+      }
+      sample.x = Math.min(sample.x + distance, limit)
+      sample.element.style.left = `${sample.x}%`
+    }
+
+    for (let index = activeSamples.length - 1; index >= 0; index -= 1) {
+      const sample = activeSamples[index]
+      if (!sample) continue
+      if (sample.x <= 106) continue
+      sample.element.classList.remove('active')
+      sample.element.style.left = '-10px'
+      activeSamples.splice(index, 1)
+    }
+  }
+
+  function simulateBelt(now: number): void {
+    if (stopped) return
+    if (!phaseStarted) beginPhase(now)
+    const phase = phases[phaseIndex]
+    if (!phase) return
+    const elapsed = now - phaseStarted
+    const delta = Math.min(now - (lastFrame || now), 40)
+    lastFrame = now
+
+    const spawnInterval = currentSpawnInterval(phase, elapsed)
+    if (now - lastSpawn >= spawnInterval) {
+      spawnSample()
+      lastSpawn = now
+    }
+    moveSamples(phase.speed * delta, Boolean(phase.blocked))
+
+    if (elapsed >= phase.duration) {
+      phaseIndex = (phaseIndex + 1) % phases.length
+      beginPhase(now)
+    }
+    frame = requestAnimationFrame(simulateBelt)
+  }
+
+  if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+    oreSamples.slice(0, 4).forEach((sample, index) => {
+      sample.style.left = `${15 + index * 22}%`
+      sample.classList.add('active')
+    })
+  } else {
+    frame = requestAnimationFrame(simulateBelt)
+  }
+
+  return () => {
+    stopped = true
+    cancelAnimationFrame(frame)
+  }
 }
