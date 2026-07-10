@@ -1,0 +1,23 @@
+{
+  "name": "nodulo",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc -b && vite build",
+    "preview": "vite preview",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "data:generate": "node scripts/generate-game-data.mjs"
+  },
+  "dependencies": {
+    "@etothepii/satisfactory-file-parser": "4.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.1",
+    "typescript": "^5.9.3",
+    "vite": "^7.2.4",
+    "vitest": "^4.0.15"
+  }
+}
