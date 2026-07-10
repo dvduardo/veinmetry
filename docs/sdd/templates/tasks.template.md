@@ -10,4 +10,5 @@
 - [ ] Rodar testes definidos no plano
 - [ ] Rodar `npm run build` quando aplicavel
 - [ ] Fazer autorrevisao do diff
-- [ ] Se for visual: subir `npm run dev` para validacao manual e parar o servidor depois
+- [ ] Se for visual: subir `npm run dev` e esperar David validar visualmente no browser (gate obrigatorio - sem essa aprovacao o ciclo nao fecha)
+- [ ] Se for visual: apos o OK do David, parar o servidor e marcar a spec como `Done`

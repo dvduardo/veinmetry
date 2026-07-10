@@ -1,0 +1,308 @@
+<!doctype html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Spec 0003 - Mockups Visuais</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #101411;
+        --surface: #171c18;
+        --surface-2: #202620;
+        --text: #edf2eb;
+        --muted: #95a097;
+        --line: #323a33;
+        --acid: #b8f34a;
+        --acid-ink: #192208;
+        --danger: #ff725e;
+        --warning: #efb65b;
+        font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+        background: var(--bg);
+        color: var(--text);
+      }
+
+      * { box-sizing: border-box; }
+      body { margin: 0; min-width: 320px; background: var(--bg); }
+      button { font: inherit; color: inherit; cursor: pointer; }
+
+      .mock-nav { position: sticky; top: 0; z-index: 10; display: flex; justify-content: space-between; align-items: center; gap: 18px; min-height: 58px; padding: 0 max(16px, calc((100vw - 1180px) / 2)); border-bottom: 1px solid color-mix(in srgb, var(--line) 75%, transparent); background: color-mix(in srgb, var(--bg) 88%, transparent); backdrop-filter: blur(16px); }
+      .mock-nav strong { letter-spacing: 0; }
+      .mock-nav div { display: flex; gap: 14px; }
+      .mock-nav a { color: var(--muted); text-decoration: none; font-size: 12px; }
+      .mock-nav a:hover { color: var(--text); }
+
+      .screen { width: min(1120px, calc(100% - 32px)); margin: 46px auto 72px; border: 1px solid var(--line); border-radius: 16px; overflow: hidden; background: var(--bg); box-shadow: 0 34px 100px #0007; }
+      .screen-label { display: flex; justify-content: space-between; gap: 16px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: #131713; color: var(--muted); font: 600 10px/1.4 ui-monospace, SFMono-Regular, Consolas, monospace; text-transform: uppercase; letter-spacing: .12em; }
+      .screen-body { padding: 26px; }
+      .screen.mobile { width: min(390px, calc(100% - 32px)); }
+      .screen.mobile .screen-body { padding: 14px; }
+
+      /* painel do mapa (novo layout) */
+      .map-card { border: 1px solid var(--line); border-radius: 14px; overflow: hidden; background: var(--surface); }
+      .map-head { display: flex; justify-content: space-between; align-items: end; gap: 18px; padding: 14px 16px; border-bottom: 1px solid var(--line); }
+      .map-head h2 { margin: 4px 0 0; font-size: 20px; letter-spacing: 0; }
+      .kicker { margin: 0; color: var(--acid); text-transform: uppercase; letter-spacing: .16em; font: 600 10px/1.5 ui-monospace, SFMono-Regular, Consolas, monospace; }
+      .legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 9px 14px; color: var(--muted); font-size: 11px; }
+      .legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+      .legend i { width: 9px; height: 9px; border-radius: 50%; background: var(--acid); }
+      .legend .bad { background: var(--danger); }
+      .legend .warn { background: var(--warning); }
+      .legend .unknown { background: var(--surface); border: 1px solid var(--warning); }
+
+      /* NOVO: corpo em duas colunas mapa | painel */
+      .map-body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; }
+      .mock-map { position: relative; min-height: 400px; aspect-ratio: 16 / 10; overflow: hidden; background: radial-gradient(120% 90% at 30% 20%, #14211a 0%, #0e1511 55%, #0b110d 100%); }
+      .mock-map::before { content: "representacao do mapa"; position: absolute; left: 12px; bottom: 10px; color: #4c584e; font: 600 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+      .terra { position: absolute; border-radius: 45% 55% 60% 40%; background: #16241b; box-shadow: inset 0 0 0 1px #1f3125; }
+      .marker { position: absolute; width: 18px; height: 18px; border: 2px solid var(--bg); border-radius: 50%; background: var(--acid); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acid) 70%, transparent), 0 7px 18px #0009; }
+      .marker.bad { background: var(--danger); box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 70%, transparent), 0 7px 18px #0009; }
+      .marker.warn { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 70%, transparent), 0 7px 18px #0009; }
+      .marker.unknown { background: var(--surface); border-color: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 70%, transparent), 0 7px 18px #0009; }
+      .marker.selected { transform: scale(1.35); box-shadow: 0 0 0 3px var(--acid), 0 0 22px color-mix(in srgb, var(--danger) 70%, transparent), 0 7px 18px #0009; z-index: 2; }
+      .cursor-hint { position: absolute; padding: 5px 8px; border: 1px solid var(--line); border-radius: 7px; background: var(--surface); color: var(--muted); font: 500 10px ui-monospace, monospace; white-space: nowrap; box-shadow: 0 8px 25px #0008; }
+
+      /* NOVO: painel de detalhe */
+      .map-detail { display: flex; flex-direction: column; min-height: 0; overflow-y: auto; border-left: 1px solid var(--line); background: var(--surface); }
+      .map-detail-empty { margin: auto; padding: 32px 26px; color: var(--muted); text-align: center; font-size: 13px; line-height: 1.6; }
+      .map-detail-empty i { display: grid; place-items: center; width: 44px; height: 44px; margin: 0 auto 12px; border: 1px dashed #657064; border-radius: 50%; color: var(--acid); font-style: normal; font-size: 18px; }
+      .map-detail-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); position: sticky; top: 0; background: var(--surface); }
+      .map-detail-head p { margin: 0; color: var(--muted); font: 600 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+      .map-detail-close { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 15px; line-height: 1; }
+      .map-detail-close:hover { color: var(--text); border-color: var(--text); }
+
+      /* card da linha reusado dentro do painel (reset leve: sem borda externa/raio) */
+      .map-detail .line-card { border: 0; border-left: 4px solid var(--danger); border-radius: 0; padding: 16px 14px; }
+      .see-in-list { display: block; width: calc(100% - 28px); margin: 4px auto 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; }
+      .see-in-list:hover { color: var(--text); border-color: var(--text); }
+
+      /* card de linha (igual ao app) */
+      .line-card { border: 1px solid var(--line); border-left: 4px solid var(--acid); border-radius: 12px; background: var(--surface); padding: 18px; }
+      .line-card.deficit { border-left-color: var(--danger); }
+      .line-card.map-selected { outline: 2px solid var(--acid); outline-offset: 3px; }
+      .card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 16px; }
+      .card-head h3 { margin: 3px 0 0; font-size: 21px; letter-spacing: 0; }
+      .card-kicker { margin: 0; color: var(--muted); font: 600 10px ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+      .pill { flex: none; padding: 6px 9px; border-radius: 999px; color: var(--danger); background: color-mix(in srgb, var(--danger) 12%, transparent); font: 600 10px ui-monospace, monospace; }
+      .metrics { display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px; margin: 14px 0; }
+      .map-detail .metrics { grid-template-columns: 1fr; gap: 6px; }
+      .metrics div { padding: 11px; border-radius: 8px; background: var(--surface-2); }
+      .metrics span { display: block; color: var(--muted); font-size: 10px; text-transform: uppercase; letter-spacing: .08em; }
+      .metrics strong { font: 500 17px ui-monospace, monospace; }
+      .metrics .net strong { color: var(--danger); }
+      details { border-top: 1px solid var(--line); }
+      summary { padding: 11px 0; cursor: pointer; font-weight: 600; font-size: 12px; }
+      summary span { color: var(--muted); }
+      details ul { list-style: none; padding: 0; margin: 0 0 8px; }
+      details li { display: flex; justify-content: space-between; gap: 14px; padding: 6px 0; color: var(--muted); font-size: 12px; }
+      details li b { color: var(--text); font: 500 11px ui-monospace, monospace; white-space: nowrap; }
+      .suggestion { margin: 12px 0 0; padding: 10px 12px; border-radius: 8px; color: var(--acid); background: color-mix(in srgb, var(--acid) 8%, transparent); font-size: 12px; }
+
+      .list-hint { margin: 20px 4px 8px; color: var(--muted); font-size: 12px; }
+      .line-list { display: grid; gap: 12px; }
+      .line-list .line-card { opacity: .82; }
+      .line-list .line-card.map-selected { opacity: 1; }
+
+      .note { width: min(1120px, calc(100% - 32px)); margin: -50px auto 70px; color: var(--muted); font-size: 13px; line-height: 1.6; }
+      .note strong { color: var(--text); }
+
+      /* variante mobile: painel empilhado */
+      .screen.mobile .map-body { grid-template-columns: 1fr; }
+      .screen.mobile .mock-map { min-height: 240px; aspect-ratio: auto; height: 240px; }
+      .screen.mobile .map-detail { max-height: 320px; border-left: 0; border-top: 1px solid var(--line); }
+      .screen.mobile .map-head { align-items: start; flex-direction: column; }
+      .screen.mobile .legend { justify-content: flex-start; }
+
+      @media (max-width: 900px) {
+        .map-body { grid-template-columns: 1fr; }
+        .map-detail { border-left: 0; border-top: 1px solid var(--line); max-height: 340px; }
+      }
+      @media (max-width: 720px) {
+        .mock-nav { align-items: flex-start; flex-direction: column; padding-block: 12px; gap: 6px; }
+        .screen { margin-top: 20px; }
+        .screen-body { padding: 14px; }
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="mock-nav">
+      <strong>Veinmetry · Spec 0003 · Painel de detalhe ao lado do mapa</strong>
+      <div>
+        <a href="#estado-vazio">1 · Estado vazio</a>
+        <a href="#estado-selecionado">2 · Nodulo selecionado</a>
+        <a href="#estado-mobile">3 · Mobile</a>
+      </div>
+    </nav>
+
+    <!-- ESTADO 1: painel vazio -->
+    <section class="screen" id="estado-vazio">
+      <div class="screen-label"><span>Estado 1 / Desktop</span><span>Painel sempre presente, aguardando clique</span></div>
+      <div class="screen-body">
+        <div class="map-card">
+          <div class="map-head">
+            <div><p class="kicker">Mapa vanilla</p><h2>Nodulos usados por este save</h2></div>
+            <div class="legend">
+              <span><i class="bad"></i>Deficit</span>
+              <span><i class="warn"></i>No limite</span>
+              <span><i></i>Com folga</span>
+              <span><i class="unknown"></i>Nao rastreavel</span>
+            </div>
+          </div>
+          <div class="map-body">
+            <div class="mock-map">
+              <div class="terra" style="left:6%; top:10%; width:44%; height:56%;"></div>
+              <div class="terra" style="left:55%; top:42%; width:38%; height:48%;"></div>
+              <span class="marker" style="left:18%; top:30%;"></span>
+              <span class="marker bad" style="left:33%; top:44%;"></span>
+              <span class="marker warn" style="left:26%; top:58%;"></span>
+              <span class="marker" style="left:64%; top:56%;"></span>
+              <span class="marker unknown" style="left:74%; top:70%;"></span>
+              <span class="marker bad" style="left:58%; top:76%;"></span>
+            </div>
+            <aside class="map-detail">
+              <div class="map-detail-empty">
+                <i>◉</i>
+                Clique num nodulo no mapa para ver os detalhes da linha aqui, sem sair do mapa.
+              </div>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ESTADO 2: nodulo selecionado -->
+    <section class="screen" id="estado-selecionado">
+      <div class="screen-label"><span>Estado 2 / Desktop</span><span>Marcador clicado → card no painel, zero scroll de pagina</span></div>
+      <div class="screen-body">
+        <div class="map-card">
+          <div class="map-head">
+            <div><p class="kicker">Mapa vanilla</p><h2>Nodulos usados por este save</h2></div>
+            <div class="legend">
+              <span><i class="bad"></i>Deficit</span>
+              <span><i class="warn"></i>No limite</span>
+              <span><i></i>Com folga</span>
+              <span><i class="unknown"></i>Nao rastreavel</span>
+            </div>
+          </div>
+          <div class="map-body">
+            <div class="mock-map">
+              <div class="terra" style="left:6%; top:10%; width:44%; height:56%;"></div>
+              <div class="terra" style="left:55%; top:42%; width:38%; height:48%;"></div>
+              <span class="marker" style="left:18%; top:30%;"></span>
+              <span class="marker bad selected" style="left:33%; top:44%;"></span>
+              <span class="cursor-hint" style="left:37%; top:36%;">Minerio de Ferro · Deficit · −60/min</span>
+              <span class="marker warn" style="left:26%; top:58%;"></span>
+              <span class="marker" style="left:64%; top:56%;"></span>
+              <span class="marker unknown" style="left:74%; top:70%;"></span>
+              <span class="marker bad" style="left:58%; top:76%;"></span>
+            </div>
+            <aside class="map-detail">
+              <div class="map-detail-head">
+                <p>Linha selecionada</p>
+                <button class="map-detail-close" aria-label="Fechar detalhes">×</button>
+              </div>
+              <article class="line-card deficit">
+                <div class="card-head">
+                  <div><p class="card-kicker">3 nodulos agrupados</p><h3>Minerio de Ferro</h3></div>
+                  <span class="pill">DEFICIT</span>
+                </div>
+                <div class="metrics">
+                  <div><span>Extracao</span><strong>240<small>/min</small></strong></div>
+                  <div><span>Demanda</span><strong>300<small>/min</small></strong></div>
+                  <div class="net"><span>Saldo</span><strong>−60<small>/min</small></strong></div>
+                </div>
+                <details>
+                  <summary>Origens <span>3</span></summary>
+                  <ul>
+                    <li><span><strong>Miner Mk2</strong> · 100% · puro</span><b>120/min</b></li>
+                    <li><span><strong>Miner Mk1</strong> · 100% · normal</span><b>60/min</b></li>
+                    <li><span><strong>Miner Mk1</strong> · 100% · normal</span><b>60/min</b></li>
+                  </ul>
+                </details>
+                <details open>
+                  <summary>Consumidores <span>2</span></summary>
+                  <ul>
+                    <li><span><strong>Smelter</strong> · Lingote de Ferro · 100%</span><b>180/min</b></li>
+                    <li><span><strong>Constructor</strong> · Placa de Ferro · 100%</span><b>120/min</b></li>
+                  </ul>
+                </details>
+                <p class="suggestion">↳ Aumente o clock do Miner Mk2 para 150% ou adicione um nodulo puro.</p>
+              </article>
+              <button class="see-in-list">Ver na lista completa ↓</button>
+            </aside>
+          </div>
+        </div>
+
+        <p class="list-hint">Abaixo do mapa, a lista completa continua igual — o card selecionado apenas ganha o contorno de destaque (sem scroll automatico):</p>
+        <div class="line-list">
+          <article class="line-card deficit map-selected">
+            <div class="card-head">
+              <div><p class="card-kicker">3 nodulos agrupados</p><h3>Minerio de Ferro</h3></div>
+              <span class="pill">DEFICIT</span>
+            </div>
+          </article>
+          <article class="line-card">
+            <div class="card-head">
+              <div><p class="card-kicker">Linha de suprimento</p><h3>Minerio de Cobre</h3></div>
+              <span class="pill" style="color: var(--acid); background: color-mix(in srgb, var(--acid) 10%, transparent);">COM FOLGA</span>
+            </div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <!-- ESTADO 3: mobile empilhado -->
+    <section class="screen mobile" id="estado-mobile">
+      <div class="screen-label"><span>Estado 3 / Mobile &lt;650px</span><span>Painel empilha abaixo do mapa</span></div>
+      <div class="screen-body">
+        <div class="map-card">
+          <div class="map-head">
+            <div><p class="kicker">Mapa vanilla</p><h2>Nodulos usados por este save</h2></div>
+            <div class="legend">
+              <span><i class="bad"></i>Deficit</span>
+              <span><i class="warn"></i>No limite</span>
+              <span><i></i>Com folga</span>
+            </div>
+          </div>
+          <div class="map-body">
+            <div class="mock-map">
+              <div class="terra" style="left:8%; top:12%; width:50%; height:60%;"></div>
+              <span class="marker bad selected" style="left:34%; top:40%;"></span>
+              <span class="marker" style="left:20%; top:62%;"></span>
+              <span class="marker warn" style="left:60%; top:52%;"></span>
+            </div>
+            <aside class="map-detail">
+              <div class="map-detail-head">
+                <p>Linha selecionada</p>
+                <button class="map-detail-close" aria-label="Fechar detalhes">×</button>
+              </div>
+              <article class="line-card deficit">
+                <div class="card-head">
+                  <div><p class="card-kicker">3 nodulos agrupados</p><h3>Minerio de Ferro</h3></div>
+                  <span class="pill">DEFICIT</span>
+                </div>
+                <div class="metrics">
+                  <div><span>Extracao</span><strong>240<small>/min</small></strong></div>
+                  <div><span>Demanda</span><strong>300<small>/min</small></strong></div>
+                  <div class="net"><span>Saldo</span><strong>−60<small>/min</small></strong></div>
+                </div>
+                <details open>
+                  <summary>Consumidores <span>2</span></summary>
+                  <ul>
+                    <li><span><strong>Smelter</strong> · Lingote de Ferro</span><b>180/min</b></li>
+                    <li><span><strong>Constructor</strong> · Placa de Ferro</span><b>120/min</b></li>
+                  </ul>
+                </details>
+              </article>
+              <button class="see-in-list">Ver na lista completa ↓</button>
+            </aside>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <p class="note">
+      <strong>Notas do mockup:</strong> o mapa aqui e uma representacao estatica — no app real continua o Leaflet com os tiles do Satisfactory Calculator. O card dentro do painel e exatamente o mesmo componente da lista (reuso de <code>lineCardView</code>), com um reset leve de borda/raio e metricas empilhadas para caber na coluna de 360px. O painel tem scroll interno proprio quando o card e maior que o mapa. O marcador selecionado ganha escala 1.35 e anel de destaque.
+    </p>
+  </body>
+</html>

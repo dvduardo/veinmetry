@@ -25,7 +25,7 @@ Ideia -> Spec -> Plano -> Mockup* -> Tasks -> Implementacao -> Review -> Done
 4. **Mockup visual** - se houver tela nova ou alteracao visual, criar `visual-mockups.html` na pasta da spec antes de implementar a tela real.
 5. **Tasks** - `tasks.md` usando `templates/tasks.template.md`, com checkpoints e verificacoes.
 6. **Implementacao** - codigo seguindo o plano aprovado. Desvios relevantes voltam para David antes de continuar.
-7. **Review** - autorrevisao do diff, testes e validacao manual quando fizer sentido.
+7. **Review** - autorrevisao do diff e testes. Se a mudanca for visual, subir a aplicacao local (`npm run dev`) e aguardar David validar o resultado no browser; o Review so e concluido (e a spec so vai para `Done`) apos essa aprovacao explicita.
 8. **Done** - feature entregue e spec atualizada para `Done`.
 
 ## Status das specs
@@ -92,5 +92,9 @@ npm run sdd:check
 npm test
 npm run build
 ```
+
+Se o ciclo alterou alguma tela, alem dos comandos acima e obrigatorio subir
+`npm run dev` e esperar David validar visualmente no browser. Sem esse OK
+explicito o ciclo nao fecha e a spec nao pode ser marcada como `Done`.
 
 O workflow de deploy tambem roda `npm run sdd:check` antes de testes e build.
