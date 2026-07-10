@@ -1,6 +1,7 @@
 import * as L from 'leaflet'
 import type { AnalysisResult, LineBalance } from '../types'
 import { escapeHtml, number, statusText } from './format'
+import { lineCardView, mapDetailEmptyView } from './views'
 
 const scimMap = {
   build: 'Stable',
@@ -40,6 +41,8 @@ export function initializeResourceMap(result: AnalysisResult): void {
   L.control.attribution({ prefix: false }).addTo(map)
   map.fitBounds(innerBounds, { padding: [20, 20] })
 
+  const markersByLine = new Map<string, L.Marker[]>()
+
   for (const line of result.lines) {
     for (const source of line.sources) {
       if (typeof source.x !== 'number' || typeof source.y !== 'number') continue
@@ -52,10 +55,25 @@ export function initializeResourceMap(result: AnalysisResult): void {
         title,
       })
       marker.bindTooltip(escapeHtml(title), { direction: 'auto', opacity: 0.95 })
-      marker.on('click', () => selectLine(line.id))
+      marker.on('click', () => selectLine(line, markersByLine))
       marker.addTo(map)
+      const lineMarkers = markersByLine.get(line.id) ?? []
+      lineMarkers.push(marker)
+      markersByLine.set(line.id, lineMarkers)
     }
   }
+
+  document.querySelector<HTMLElement>('#map-detail')?.addEventListener('click', (event) => {
+    const target = event.target as HTMLElement
+    if (target.closest('.map-detail-close')) {
+      clearSelection(markersByLine)
+      return
+    }
+    const seeInList = target.closest<HTMLElement>('.map-detail-see-in-list')
+    if (seeInList) {
+      findLineCard(seeInList.dataset.lineId)?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+    }
+  })
 }
 
 function rasterPoint(x: number, y: number): L.PointExpression {
@@ -92,11 +110,41 @@ function markerIcon(status: LineBalance['status']): L.DivIcon {
   })
 }
 
-function selectLine(lineId: string | undefined): void {
-  if (!lineId) return
-  const target = Array.from(document.querySelectorAll<HTMLElement>('.line-card'))
-    .find((card) => card.dataset.lineId === lineId)
+function selectLine(line: LineBalance, markersByLine: Map<string, L.Marker[]>): void {
+  const panel = document.querySelector<HTMLElement>('#map-detail')
+  if (!panel) return
+
+  panel.innerHTML = `
+    <div class="map-detail-head">
+      <p>Linha selecionada</p>
+      <button type="button" class="map-detail-close" aria-label="Fechar detalhes">×</button>
+    </div>
+    ${lineCardView(line)}
+    <button type="button" class="map-detail-see-in-list" data-line-id="${escapeHtml(line.id)}">Ver na lista completa ↓</button>
+  `
+  panel.scrollTop = 0
+
   document.querySelectorAll('.line-card.map-selected').forEach((card) => card.classList.remove('map-selected'))
-  target?.classList.add('map-selected')
-  target?.scrollIntoView({ behavior: 'smooth', block: 'center' })
+  findLineCard(line.id)?.classList.add('map-selected')
+
+  for (const [lineId, markers] of markersByLine) {
+    for (const marker of markers) {
+      marker.getElement()?.classList.toggle('is-selected', lineId === line.id)
+    }
+  }
+}
+
+function clearSelection(markersByLine: Map<string, L.Marker[]>): void {
+  const panel = document.querySelector<HTMLElement>('#map-detail')
+  if (panel) panel.innerHTML = mapDetailEmptyView()
+  document.querySelectorAll('.line-card.map-selected').forEach((card) => card.classList.remove('map-selected'))
+  for (const markers of markersByLine.values()) {
+    for (const marker of markers) marker.getElement()?.classList.remove('is-selected')
+  }
+}
+
+function findLineCard(lineId: string | undefined): HTMLElement | undefined {
+  if (!lineId) return undefined
+  return Array.from(document.querySelectorAll<HTMLElement>('.line-list .line-card'))
+    .find((card) => card.dataset.lineId === lineId)
 }

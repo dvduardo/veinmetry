@@ -111,11 +111,20 @@ function resourceMapView(result: AnalysisResult): string {
           <span><i class="untraceable"></i>Não rastreável</span>
         </div>
       </div>
-      <div id="resource-map" class="resource-map"></div>
+      <div class="resource-map-body">
+        <div id="resource-map" class="resource-map"></div>
+        <aside id="map-detail" class="map-detail" aria-live="polite">
+          ${mapDetailEmptyView()}
+        </aside>
+      </div>
     </section>`
 }
 
-function lineCardView(line: LineBalance): string {
+export function mapDetailEmptyView(): string {
+  return '<p class="map-detail-empty">Clique num nódulo no mapa para ver os detalhes da linha aqui, sem sair do mapa.</p>'
+}
+
+export function lineCardView(line: LineBalance): string {
   const balanceSign = line.balance > 0 ? '+' : ''
   const sourceRows = line.sources.map((source) => `
     <li>
