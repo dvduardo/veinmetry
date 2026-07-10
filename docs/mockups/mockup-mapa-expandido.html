@@ -1,0 +1,549 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veinmetry — Mockup funcional · Ideia 05 · Mapa expandido</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  /* ===== tokens copiados do app (styles.css) ===== */
+  :root {
+    color-scheme: dark;
+    --bg: #101411;
+    --surface: #171c18;
+    --surface-2: #202620;
+    --text: #edf2eb;
+    --muted: #95a097;
+    --line: #323a33;
+    --acid: #b8f34a;
+    --acid-ink: #192208;
+    --danger: #ff725e;
+    --danger-bg: #2a1916;
+    --warning: #efb65b;
+    --radius: 14px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+  h1, h2 { font-weight: 700; letter-spacing: -.02em; }
+  .eyebrow { margin: 0; font: 600 12px/1 'DM Mono', ui-monospace, monospace; letter-spacing: .16em; text-transform: uppercase; color: var(--acid); }
+
+  /* faixa de aviso do mockup */
+  .mockup-banner {
+    position: sticky; top: 0; z-index: 3000;
+    display: flex; justify-content: center; gap: 10px; padding: 9px 16px;
+    background: var(--acid); color: var(--acid-ink);
+    font: 600 12px/1.4 'DM Mono', ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase;
+  }
+
+  /* ===== réplica da página de relatório ===== */
+  .topbar { width: min(1180px, calc(100% - 40px)); margin: auto; padding: 24px 0; display: flex; align-items: center; justify-content: space-between; }
+  .brand { font: 800 26px Inter; letter-spacing: -.03em; color: var(--text); text-decoration: none; }
+  .theme-toggle { width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text); cursor: pointer; font-size: 20px; }
+
+  .report-shell { width: min(1040px, calc(100% - 40px)); margin: 40px auto 100px; }
+  .report-heading { display: flex; justify-content: space-between; align-items: end; gap: 30px; }
+  .report-heading h1 { margin: 6px 0 0; font-size: clamp(34px, 5vw, 52px); }
+  .report-heading h1 span { color: var(--muted); }
+  .new-file { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 10px 18px; cursor: pointer; font-size: 13px; }
+
+  .summary-strip { display: grid; grid-template-columns: repeat(4, 1fr); margin: 28px 0 22px; border: 1px solid var(--line); border-radius: var(--radius); overflow: hidden; background: var(--surface); }
+  .summary-strip div { padding: 22px; display: flex; flex-direction: column; border-right: 1px solid var(--line); }
+  .summary-strip div:last-child { border-right: 0; }
+  .summary-strip strong { font: 500 30px 'DM Mono', ui-monospace, monospace; }
+  .summary-strip span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .1em; margin-top: 4px; }
+  .summary-strip .bad strong { color: var(--danger); }
+
+  .global-warning { padding: 16px 20px; border-left: 3px solid var(--warning); border-radius: 0 10px 10px 0; background: color-mix(in srgb, var(--warning) 8%, var(--surface)); color: var(--warning); font-size: 14px; }
+
+  /* painel do mapa (layout atual) */
+  .resource-map-panel { margin: 34px 0; overflow: hidden; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); }
+  .resource-map-head { display: flex; align-items: end; justify-content: space-between; gap: 18px; padding: 16px 18px; border-bottom: 1px solid var(--line); }
+  .resource-map-head h2 { margin: 4px 0 0; font-size: 24px; letter-spacing: 0; }
+  .map-legend { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px 14px; color: var(--muted); font-size: 12px; }
+  .map-legend span { display: inline-flex; align-items: center; gap: 7px; white-space: nowrap; }
+  .map-legend i { width: 10px; height: 10px; border-radius: 50%; border: 2px solid var(--acid); display: inline-block; }
+  .map-legend .deficit { border-color: var(--danger); }
+  .map-legend .balanced { border-color: var(--warning); }
+  .map-legend .untraceable { border-color: var(--warning); background: color-mix(in srgb, var(--warning) 25%, transparent); }
+
+  .resource-map-body { display: grid; grid-template-columns: minmax(0, 1fr) 360px; }
+  .resource-map-wrap { position: relative; }
+  .resource-map { width: 100%; height: 100%; min-height: 360px; aspect-ratio: 16 / 9; overflow: hidden; background: #0e1511; }
+  .map-detail { display: flex; flex-direction: column; height: 0; min-height: 100%; overflow-y: auto; border-left: 1px solid var(--line); background: var(--surface); }
+  .map-detail-empty { margin: auto; padding: 32px 26px; color: var(--muted); text-align: center; font-size: 13px; line-height: 1.6; }
+
+  /* ===== NOVO: botão expandir (a ideia 05) ===== */
+  .map-expand-btn {
+    position: absolute; z-index: 900; top: 12px; right: 12px;
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent);
+    backdrop-filter: blur(4px);
+    color: var(--text); font: 600 12.5px Inter; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+    transition: border-color .15s, color .15s;
+  }
+  .map-expand-btn:hover { border-color: var(--acid); color: var(--acid); }
+  .map-expand-btn b { font: 500 15px 'DM Mono', ui-monospace, monospace; }
+
+  /* ===== NOVO: modo expandido ===== */
+  body.map-expanded { overflow: hidden; }
+  .expanded-shell {
+    position: fixed; inset: 0; z-index: 2000;
+    display: none; grid-template-rows: auto 1fr;
+    background: var(--bg);
+  }
+  body.map-expanded .expanded-shell { display: grid; }
+
+  .expanded-topbar {
+    display: flex; align-items: center; gap: 22px; flex-wrap: wrap;
+    padding: 12px 20px; border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .expanded-topbar .titles h2 { margin: 2px 0 0; font-size: 18px; letter-spacing: 0; }
+  .expanded-topbar .eyebrow { font-size: 10px; }
+  .expanded-topbar .spacer { flex: 1; }
+  .expanded-filters { display: flex; gap: 8px; overflow-x: auto; }
+  .expanded-filters button { white-space: nowrap; border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 7px 13px; cursor: pointer; font-size: 12.5px; }
+  .expanded-filters button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .expanded-close {
+    display: inline-flex; align-items: center; gap: 10px;
+    border: 1px solid var(--line); border-radius: 10px; background: transparent;
+    color: var(--text); padding: 9px 14px; font: 600 12.5px Inter; cursor: pointer;
+  }
+  .expanded-close:hover { border-color: var(--danger); color: var(--danger); }
+  .expanded-close kbd { font: 500 10.5px 'DM Mono', ui-monospace, monospace; border: 1px solid var(--line); border-radius: 5px; padding: 2px 6px; color: var(--muted); }
+
+  .expanded-body { position: relative; min-height: 0; }
+  #resource-map-full { position: absolute; inset: 0; background: #0e1511; }
+
+  /* drawer de detalhe sobre o mapa expandido */
+  .expanded-drawer {
+    position: absolute; z-index: 1000; top: 14px; right: 14px; bottom: 14px;
+    width: min(400px, calc(100vw - 28px));
+    display: flex; flex-direction: column;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: color-mix(in srgb, var(--surface) 94%, transparent);
+    backdrop-filter: blur(6px);
+    box-shadow: 0 24px 60px rgba(0,0,0,.5);
+    overflow: hidden;
+    transform: translateX(calc(100% + 20px)); opacity: 0;
+    transition: transform .25s cubic-bezier(.2,.8,.25,1), opacity .2s;
+    pointer-events: none;
+  }
+  .expanded-drawer.open { transform: translateX(0); opacity: 1; pointer-events: auto; }
+  .expanded-drawer-scroll { overflow-y: auto; }
+  .map-detail-head { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .map-detail-head p { margin: 0; color: var(--muted); font: 500 10px 'DM Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+  .map-detail-close { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; }
+  .map-detail-close:hover { color: var(--text); border-color: var(--text); }
+
+  /* ===== line card (réplica fiel do app) ===== */
+  .line-list { display: grid; gap: 16px; }
+  .filters { display: flex; gap: 8px; margin: 32px 0 18px; overflow-x: auto; }
+  .filters button { white-space: nowrap; border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 8px 14px; cursor: pointer; font-size: 13px; }
+  .filters button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .line-card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--acid); border-radius: 12px; padding: 24px; }
+  .line-card.deficit { border-left-color: var(--danger); }
+  .line-card.balanced, .line-card.untraceable { border-left-color: var(--warning); }
+  .card-head { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+  .card-kicker { margin: 0 0 4px; color: var(--muted); font: 500 11px 'DM Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+  .card-head h2 { margin: 0; font-size: 25px; letter-spacing: 0; }
+  .status-pill { padding: 6px 10px; border-radius: 999px; color: var(--acid); background: color-mix(in srgb, var(--acid) 10%, transparent); font: 500 11px 'DM Mono', ui-monospace, monospace; white-space: nowrap; }
+  .deficit .status-pill { color: var(--danger); background: var(--danger-bg); }
+  .balanced .status-pill, .untraceable .status-pill { color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, transparent); }
+  .balance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0; }
+  .balance-grid div { background: var(--surface-2); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; }
+  .balance-grid span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .balance-grid strong { margin-top: 4px; font: 500 22px 'DM Mono', ui-monospace, monospace; }
+  .balance-grid small { font-size: 11px; color: var(--muted); }
+  .surplus .balance-grid .net strong { color: var(--acid); }
+  .deficit .balance-grid .net strong { color: var(--danger); }
+  .balanced .balance-grid .net strong { color: var(--warning); }
+  details { border-top: 1px solid var(--line); }
+  summary { padding: 14px 0; cursor: pointer; font-weight: 600; font-size: 13px; }
+  summary span { color: var(--muted); }
+  details ul { list-style: none; padding: 0; margin: 0 0 10px; }
+  details li { display: flex; justify-content: space-between; gap: 20px; padding: 8px 0; color: var(--muted); font-size: 13px; }
+  details li strong { color: var(--text); font-weight: 600; }
+  details li b { color: var(--text); font: 500 12px 'DM Mono', ui-monospace, monospace; white-space: nowrap; }
+  .suggestion { padding: 13px 15px; border-radius: 10px; background: color-mix(in srgb, var(--acid) 8%, transparent); color: var(--acid); font-size: 13px; }
+  .warnings { color: var(--warning); font-size: 12px; }
+  .warnings p { margin: 7px 0; }
+  .muted { color: var(--muted); }
+
+  /* card dentro do drawer/painel lateral (compacto, igual ao .map-detail do app) */
+  .expanded-drawer .line-card, .map-detail .line-card { border: 0; border-left: 4px solid var(--acid); border-radius: 0; padding: 16px 14px; background: transparent; }
+  .expanded-drawer .line-card.deficit, .map-detail .line-card.deficit { border-left-color: var(--danger); }
+  .expanded-drawer .line-card.balanced, .expanded-drawer .line-card.untraceable,
+  .map-detail .line-card.balanced, .map-detail .line-card.untraceable { border-left-color: var(--warning); }
+  .expanded-drawer .balance-grid, .map-detail .balance-grid { grid-template-columns: 1fr; gap: 6px; margin: 14px 0; }
+  .expanded-drawer .card-head h2, .map-detail .card-head h2 { font-size: 21px; }
+  .map-detail-see-in-list { display: block; width: calc(100% - 28px); margin: 4px auto 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+  .map-detail-see-in-list:hover { color: var(--text); border-color: var(--text); }
+
+  /* ===== leaflet skin do app ===== */
+  .leaflet-container { font: inherit; }
+  .leaflet-control-layers, .leaflet-control-zoom a, .leaflet-control-attribution { background: var(--surface) !important; color: var(--text) !important; border-color: var(--line) !important; }
+  .leaflet-control-zoom a { border-bottom-color: var(--line) !important; }
+  .leaflet-control-zoom a:hover { background: var(--surface-2) !important; }
+  .leaflet-tooltip { border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: 0 12px 30px rgba(0,0,0,.4); font: 500 12px/1.4 'DM Mono', ui-monospace, monospace; }
+  .veinmetry-marker { border: 0; background: transparent; }
+  .veinmetry-marker span { display: block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--bg); background: var(--acid); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acid) 65%, transparent), 0 4px 14px rgba(0,0,0,.55); }
+  .veinmetry-marker-deficit span { background: var(--danger); box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 75%, transparent), 0 4px 14px rgba(0,0,0,.55); }
+  .veinmetry-marker-balanced span { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 75%, transparent), 0 4px 14px rgba(0,0,0,.55); }
+  .veinmetry-marker-untraceable span { background: var(--surface); border-color: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 75%, transparent), 0 4px 14px rgba(0,0,0,.55); }
+  .veinmetry-marker.is-selected span { transform: scale(1.35); border-color: var(--text); }
+  .veinmetry-marker.is-dimmed { opacity: .25; }
+
+  @media (max-width: 880px) {
+    .resource-map-body { grid-template-columns: 1fr; }
+    .map-detail { display: none; }
+    .summary-strip { grid-template-columns: repeat(2, 1fr); }
+    .summary-strip div:nth-child(2) { border-right: 0; }
+    .summary-strip div:nth-child(-n+2) { border-bottom: 1px solid var(--line); }
+    .report-heading { flex-direction: column; align-items: start; }
+  }
+</style>
+</head>
+<body>
+
+<div class="mockup-banner">Mockup funcional · Ideia 05 — clique em ⛶ Expandir no mapa · dados simulados de um save</div>
+
+<header class="topbar">
+  <a class="brand" href="#">Veinmetry</a>
+  <button class="theme-toggle" type="button" aria-label="Alternar tema">◐</button>
+</header>
+
+<section class="report-shell">
+  <div class="report-heading">
+    <div>
+      <p class="eyebrow">FABRICA_NORTE_2.sav · build 372858</p>
+      <h1>Balanço <span>das linhas</span></h1>
+    </div>
+    <button class="new-file" type="button">Analisar outro save</button>
+  </div>
+
+  <div class="summary-strip">
+    <div><strong>7</strong><span>linhas</span></div>
+    <div class="bad"><strong>2</strong><span>em déficit</span></div>
+    <div><strong>1</strong><span>no limite</span></div>
+    <div><strong>13</strong><span>mineradoras</span></div>
+  </div>
+
+  <div class="global-warning">Este save usa mods; construções de mods podem não ser rastreadas na v1.</div>
+
+  <!-- painel do mapa: layout atual + botão expandir -->
+  <section class="resource-map-panel" aria-label="Mapa dos nódulos usados no save">
+    <div class="resource-map-head">
+      <div><p class="eyebrow">Mapa vanilla</p><h2>Nódulos usados por este save</h2></div>
+      <div class="map-legend" aria-label="Legenda">
+        <span><i class="deficit"></i>Déficit</span>
+        <span><i class="balanced"></i>No limite</span>
+        <span><i class="surplus"></i>Com folga</span>
+        <span><i class="untraceable"></i>Não rastreável</span>
+      </div>
+    </div>
+    <div class="resource-map-body">
+      <div class="resource-map-wrap">
+        <div id="resource-map" class="resource-map"></div>
+        <button id="expand-btn" class="map-expand-btn" type="button" aria-label="Expandir mapa para tela cheia">
+          <b>⛶</b> Expandir
+        </button>
+      </div>
+      <aside id="map-detail" class="map-detail" aria-live="polite">
+        <p class="map-detail-empty">Clique num nódulo no mapa para ver os detalhes da linha aqui, sem sair do mapa.</p>
+      </aside>
+    </div>
+  </section>
+
+  <nav class="filters" aria-label="Filtrar linhas">
+    <button class="active">Todas</button>
+    <button>Déficit</button>
+    <button>No limite</button>
+    <button>Com folga</button>
+    <button>Não rastreáveis</button>
+  </nav>
+
+  <div id="line-list" class="line-list"></div>
+</section>
+
+<!-- ===== MODO EXPANDIDO ===== -->
+<div class="expanded-shell" role="dialog" aria-modal="true" aria-label="Mapa em tela cheia">
+  <div class="expanded-topbar">
+    <div class="titles">
+      <p class="eyebrow">FABRICA_NORTE_2.sav · Mapa vanilla</p>
+      <h2>Nódulos usados por este save</h2>
+    </div>
+    <nav id="expanded-filters" class="expanded-filters" aria-label="Filtrar nódulos">
+      <button class="active" data-filter="all">Todas</button>
+      <button data-filter="deficit">Déficit</button>
+      <button data-filter="balanced">No limite</button>
+      <button data-filter="surplus">Com folga</button>
+      <button data-filter="untraceable">Não rastreáveis</button>
+    </nav>
+    <div class="spacer"></div>
+    <div class="map-legend" aria-label="Legenda">
+      <span><i class="deficit"></i>Déficit</span>
+      <span><i class="balanced"></i>No limite</span>
+      <span><i class="surplus"></i>Com folga</span>
+      <span><i class="untraceable"></i>Não rastreável</span>
+    </div>
+    <button id="expanded-close" class="expanded-close" type="button">Fechar <kbd>Esc</kbd></button>
+  </div>
+  <div class="expanded-body">
+    <div id="resource-map-full"></div>
+    <aside id="expanded-drawer" class="expanded-drawer" aria-live="polite"></aside>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ===== configuração idêntica ao app (src/app/map.ts) ===== */
+const scim = { build: 'Stable', version: 1783579096, backgroundSize: 40960, zoomRatio: 8, innerMin: 4096, innerMax: 36864, west: -418448.91503875, east: 519051.91503875, north: -468750, south: 468750 };
+
+function tileLayer(layer) {
+  return L.tileLayer(`https://static.satisfactory-calculator.com/imgMap/${layer}/${scim.build}/{z}/{x}/{y}.png?v=${scim.version}`, {
+    attribution: 'Map tiles © Satisfactory Calculator / Coffee Stain Studios',
+    maxNativeZoom: 8, maxZoom: 12, minNativeZoom: 3, minZoom: 4, noWrap: true, referrerPolicy: 'no-referrer', tileSize: 256,
+  });
+}
+function rasterPoint(x, y) {
+  const w = scim.east - scim.west, h = scim.south - scim.north;
+  return [ ((x - scim.west) / w) * scim.backgroundSize, ((y - scim.north) / h) * scim.backgroundSize ];
+}
+function markerIcon(status) {
+  return L.divIcon({ className: `veinmetry-marker veinmetry-marker-${status}`, html: '<span></span>', iconAnchor: [9, 9], iconSize: [18, 18] });
+}
+
+/* ===== save simulado (coordenadas em unidades do jogo) ===== */
+const LINES = [
+  {
+    id: 'copper-1', itemName: 'Copper Ore', status: 'deficit', merged: true,
+    extraction: 240, demand: 330, balance: -90,
+    sources: [
+      { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: -32000, y: 152000 },
+      { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: 9500, y: 161000 },
+    ],
+    consumers: [
+      { machine: 'Smelter ×8', recipe: 'Copper Ingot', clock: 1, demand: 240 },
+      { machine: 'Constructor ×3', recipe: 'Wire', clock: 1, demand: 90 },
+    ],
+    suggestion: 'Suba o clock das mineradoras para 138% ou conecte o nódulo puro a oeste da base.',
+    warnings: [],
+  },
+  {
+    id: 'iron-1', itemName: 'Iron Ore', status: 'surplus', merged: true,
+    extraction: 480, demand: 300, balance: 180,
+    sources: [
+      { miner: 'Miner Mk2', clock: 1, purity: 'pure', rate: 240, x: -108000, y: 118000 },
+      { miner: 'Miner Mk2', clock: 1, purity: 'pure', rate: 240, x: -96500, y: 131500 },
+    ],
+    consumers: [
+      { machine: 'Smelter ×10', recipe: 'Iron Ingot', clock: 1, demand: 300 },
+    ],
+    suggestion: null, warnings: [],
+  },
+  {
+    id: 'limestone-1', itemName: 'Limestone', status: 'balanced', merged: false,
+    extraction: 240, demand: 240, balance: 0,
+    sources: [
+      { miner: 'Miner Mk2', clock: 1, purity: 'pure', rate: 240, x: 152000, y: 78000 },
+    ],
+    consumers: [
+      { machine: 'Constructor ×8', recipe: 'Concrete', clock: 1, demand: 240 },
+    ],
+    suggestion: 'Qualquer máquina extra vai gerar déficit; considere um segundo nódulo.', warnings: [],
+  },
+  {
+    id: 'coal-1', itemName: 'Coal', status: 'surplus', merged: true,
+    extraction: 420, demand: 315, balance: 105,
+    sources: [
+      { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: 205000, y: -12000 },
+      { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: 214500, y: -4500 },
+      { miner: 'Miner Mk2', clock: 1.5, purity: 'normal', rate: 180, x: 226000, y: -21000 },
+    ],
+    consumers: [
+      { machine: 'Coal Generator ×21', recipe: 'Energia', clock: 1, demand: 315 },
+    ],
+    suggestion: null, warnings: [],
+  },
+  {
+    id: 'caterium-1', itemName: 'Caterium Ore', status: 'untraceable', merged: false,
+    extraction: 120, demand: 0, balance: 120,
+    sources: [
+      { miner: 'Miner Mk1', clock: 1, purity: 'normal', rate: 60, x: 289000, y: 96000 },
+      { miner: 'Miner Mk1', clock: 1, purity: 'normal', rate: 60, x: 297500, y: 104000 },
+    ],
+    consumers: [],
+    suggestion: null,
+    warnings: ['A linha atravessa um Industrial Storage; consumidores após o armazém não são rastreáveis na v1.'],
+  },
+  {
+    id: 'quartz-1', itemName: 'Raw Quartz', status: 'deficit', merged: false,
+    extraction: 120, demand: 150, balance: -30,
+    sources: [
+      { miner: 'Miner Mk2', clock: 0.5, purity: 'pure', rate: 120, x: 65000, y: -38000 },
+    ],
+    consumers: [
+      { machine: 'Constructor ×4', recipe: 'Quartz Crystal', clock: 1, demand: 150 },
+    ],
+    suggestion: 'A mineradora está a 50%; subir para 63% zera o déficit sem novo nódulo.',
+    warnings: [],
+  },
+  {
+    id: 'bauxite-1', itemName: 'Bauxite', status: 'surplus', merged: false,
+    extraction: 120, demand: 60, balance: 60,
+    sources: [
+      { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: -215000, y: -95000 },
+    ],
+    consumers: [
+      { machine: 'Refinery ×1', recipe: 'Alumina Solution', clock: 1, demand: 60 },
+    ],
+    suggestion: null, warnings: [],
+  },
+];
+
+const STATUS_TEXT = { deficit: 'Déficit', balanced: 'No limite', surplus: 'Com folga', untraceable: 'Não rastreável' };
+const PURITY_TEXT = { pure: 'puro', normal: 'normal', impure: 'impuro' };
+const fmt = (n) => n.toLocaleString('pt-BR');
+
+/* ===== card de linha (mesmo markup do app, views.ts) ===== */
+function lineCardView(line) {
+  const sign = line.balance > 0 ? '+' : '';
+  const sources = line.sources.map((s) => `
+    <li><span><strong>${s.miner}</strong> · ${Math.round(s.clock * 100)}% · ${PURITY_TEXT[s.purity]}</span><b>${fmt(s.rate)}/min</b></li>`).join('');
+  const consumers = line.consumers.length
+    ? line.consumers.map((c) => `
+      <li><span><strong>${c.machine}</strong> · ${c.recipe} · ${Math.round(c.clock * 100)}%</span><b>${fmt(c.demand)}/min</b></li>`).join('')
+    : '<li class="muted">Nenhum consumidor rastreável nesta linha.</li>';
+  return `
+    <article class="line-card ${line.status}" data-line-id="${line.id}">
+      <div class="card-head">
+        <div><p class="card-kicker">${line.merged ? `${line.sources.length} nódulos agrupados` : 'Linha de suprimento'}</p><h2>${line.itemName}</h2></div>
+        <span class="status-pill">${STATUS_TEXT[line.status]}</span>
+      </div>
+      <div class="balance-grid">
+        <div><span>Extração</span><strong>${fmt(line.extraction)}<small>/min</small></strong></div>
+        <div><span>Demanda</span><strong>${fmt(line.demand)}<small>/min</small></strong></div>
+        <div class="net"><span>Saldo</span><strong>${sign}${fmt(line.balance)}<small>/min</small></strong></div>
+      </div>
+      <details><summary>Origens <span>${line.sources.length}</span></summary><ul>${sources}</ul></details>
+      <details open><summary>Consumidores <span>${line.consumers.length}</span></summary><ul>${consumers}</ul></details>
+      ${line.suggestion ? `<p class="suggestion">↳ ${line.suggestion}</p>` : ''}
+      ${line.warnings.length ? `<div class="warnings">${line.warnings.map((w) => `<p>⚠ ${w}</p>`).join('')}</div>` : ''}
+    </article>`;
+}
+
+document.getElementById('line-list').innerHTML = LINES.map(lineCardView).join('');
+
+/* ===== fábrica de mapa (usada nos dois modos) ===== */
+function buildMap(containerId, onMarkerClick) {
+  const map = L.map(containerId, { attributionControl: false, crs: L.CRS.Simple, maxBoundsViscosity: 1, scrollWheelZoom: true });
+  const innerBottomLeft = map.unproject([scim.innerMin, scim.innerMax], scim.zoomRatio);
+  const innerTopRight = map.unproject([scim.innerMax, scim.innerMin], scim.zoomRatio);
+  const innerBounds = L.latLngBounds(innerBottomLeft, innerTopRight);
+  const realistic = tileLayer('realisticLayer');
+  const game = tileLayer('gameLayer');
+  map.setMaxBounds(innerBounds);
+  realistic.addTo(map);
+  L.control.layers({ Realistic: realistic, Game: game }, undefined, { position: 'topleft' }).addTo(map);
+  L.control.attribution({ prefix: false }).addTo(map);
+  map.fitBounds(innerBounds, { padding: [20, 20] });
+
+  const markersByLine = new Map();
+  for (const line of LINES) {
+    for (const s of line.sources) {
+      const latLng = map.unproject(rasterPoint(s.x, s.y), scim.zoomRatio);
+      const title = `${line.itemName} · ${s.miner} · ${STATUS_TEXT[line.status]} · ${fmt(s.rate)}/min`;
+      const marker = L.marker(latLng, { icon: markerIcon(line.status), keyboard: true, title });
+      marker.bindTooltip(title, { direction: 'auto', opacity: 0.95 });
+      marker.on('click', () => onMarkerClick(line));
+      marker.addTo(map);
+      const list = markersByLine.get(line.id) ?? [];
+      list.push(marker);
+      markersByLine.set(line.id, list);
+    }
+  }
+  return { map, markersByLine, innerBounds };
+}
+
+function highlight(markersByLine, lineId) {
+  for (const [id, markers] of markersByLine) {
+    for (const m of markers) m.getElement()?.classList.toggle('is-selected', id === lineId);
+  }
+}
+
+/* ===== mapa embutido (comportamento de prod atual) ===== */
+const embedded = buildMap('resource-map', (line) => {
+  const panel = document.getElementById('map-detail');
+  panel.innerHTML = `
+    <div class="map-detail-head"><p>Linha selecionada</p><button type="button" class="map-detail-close" aria-label="Fechar">×</button></div>
+    <div class="expanded-drawer-card">${lineCardView(line)}</div>
+    <button type="button" class="map-detail-see-in-list">Ver na lista completa ↓</button>`;
+  panel.scrollTop = 0;
+  panel.querySelector('.map-detail-close').onclick = () => {
+    panel.innerHTML = '<p class="map-detail-empty">Clique num nódulo no mapa para ver os detalhes da linha aqui, sem sair do mapa.</p>';
+    highlight(embedded.markersByLine, null);
+  };
+  highlight(embedded.markersByLine, line.id);
+});
+
+/* ===== modo expandido ===== */
+let full = null;
+const drawer = document.getElementById('expanded-drawer');
+
+function openDrawer(line) {
+  drawer.innerHTML = `
+    <div class="map-detail-head"><p>Linha selecionada</p><button type="button" class="map-detail-close" aria-label="Fechar detalhes">×</button></div>
+    <div class="expanded-drawer-scroll">${lineCardView(line)}</div>`;
+  drawer.classList.add('open');
+  drawer.querySelector('.map-detail-close').onclick = closeDrawer;
+  highlight(full.markersByLine, line.id);
+}
+function closeDrawer() {
+  drawer.classList.remove('open');
+  if (full) highlight(full.markersByLine, null);
+}
+
+function applyFilter(status) {
+  for (const line of LINES) {
+    const show = status === 'all' || line.status === status;
+    for (const m of full.markersByLine.get(line.id) ?? []) {
+      m.getElement()?.classList.toggle('is-dimmed', !show);
+    }
+  }
+}
+
+document.getElementById('expand-btn').addEventListener('click', () => {
+  document.body.classList.add('map-expanded');
+  if (!full) {
+    full = buildMap('resource-map-full', openDrawer);
+  }
+  requestAnimationFrame(() => {
+    full.map.invalidateSize();
+    full.map.fitBounds(full.innerBounds, { padding: [30, 30] });
+  });
+});
+
+function exitExpanded() {
+  closeDrawer();
+  document.body.classList.remove('map-expanded');
+}
+document.getElementById('expanded-close').addEventListener('click', exitExpanded);
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || !document.body.classList.contains('map-expanded')) return;
+  if (drawer.classList.contains('open')) closeDrawer();
+  else exitExpanded();
+});
+
+document.getElementById('expanded-filters').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-filter]');
+  if (!btn) return;
+  document.querySelectorAll('#expanded-filters button').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  applyFilter(btn.dataset.filter);
+});
+</script>
+</body>
+</html>

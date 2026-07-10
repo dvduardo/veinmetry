@@ -1,9 +1,11 @@
-import type { AnalysisResult, GameData, WorkerResponse } from '../types'
+import type { AnalysisResult, GameData, LineBalance, WorkerResponse } from '../types'
+import { demoResult } from './demo'
 import { initializeResourceMap } from './map'
-import { errorView, landingView, loadingView, reportView } from './views'
+import { errorView, landingView, lineCardView, loadingView, reportView } from './views'
 
 let gameDataPromise: Promise<GameData> | undefined
 let stopBrandBeltAnimations: (() => void) | undefined
+let removeReportKeydown: (() => void) | undefined
 
 export function startApp(app: HTMLElement): void {
   function loadGameData(): Promise<GameData> {
@@ -16,9 +18,11 @@ export function startApp(app: HTMLElement): void {
 
   function landing(): void {
     stopBrandBeltAnimations?.()
+    removeReportKeydown?.()
     app.innerHTML = landingView(import.meta.env.BASE_URL)
     bindTheme()
     stopBrandBeltAnimations = startBrandBeltAnimations()
+    document.querySelector('.demo-cta')?.addEventListener('click', () => renderReport(demoResult(), { demo: true }))
     const input = document.querySelector<HTMLInputElement>('#file-input')!
     const dropzone = document.querySelector<HTMLElement>('.dropzone')!
     input.addEventListener('change', () => input.files?.[0] && void analyzeFile(input.files[0]))
@@ -85,23 +89,87 @@ export function startApp(app: HTMLElement): void {
     }
   }
 
-  function renderReport(result: AnalysisResult): void {
+  function renderReport(result: AnalysisResult, options?: { demo?: boolean }): void {
     stopBrandBeltAnimations?.()
-    app.innerHTML = reportView(result)
+    removeReportKeydown?.()
+    app.innerHTML = reportView(result, options?.demo ?? false)
     bindTheme()
     stopBrandBeltAnimations = startBrandBeltAnimations()
     document.querySelectorAll('.brand-button, .new-file').forEach((button) => button.addEventListener('click', landing))
-    document.querySelectorAll<HTMLButtonElement>('.filters button').forEach((button) => {
+
+    const drawer = document.querySelector<HTMLElement>('#detail-drawer')!
+    const linesPanel = document.querySelector<HTMLElement>('#lines-panel')!
+    const linesToggle = document.querySelector<HTMLButtonElement>('#lines-toggle')!
+
+    function openLineDetail(line: LineBalance): void {
+      drawer.innerHTML = `
+        <div class="panel-head">
+          <p>Linha selecionada</p>
+          <button type="button" class="panel-close" aria-label="Fechar detalhes">×</button>
+        </div>
+        <div class="detail-drawer-scroll">${lineCardView(line)}</div>
+      `
+      drawer.classList.add('open')
+      linesPanel.querySelectorAll<HTMLElement>('.line-card').forEach((card) => {
+        card.classList.toggle('map-selected', card.dataset.lineId === line.id)
+      })
+      mapController?.highlightLine(line.id)
+    }
+
+    function closeLineDetail(): void {
+      drawer.classList.remove('open')
+      linesPanel.querySelectorAll('.line-card.map-selected').forEach((card) => card.classList.remove('map-selected'))
+      mapController?.highlightLine(null)
+    }
+
+    const mapController = initializeResourceMap(result, openLineDetail)
+
+    drawer.addEventListener('click', (event) => {
+      if ((event.target as HTMLElement).closest('.panel-close')) closeLineDetail()
+    })
+
+    function setLinesPanelOpen(open: boolean): void {
+      linesPanel.classList.toggle('open', open)
+      linesToggle.classList.toggle('active', open)
+      linesToggle.setAttribute('aria-expanded', String(open))
+    }
+    linesToggle.addEventListener('click', () => setLinesPanelOpen(!linesPanel.classList.contains('open')))
+    linesPanel.querySelector('.panel-head .panel-close')?.addEventListener('click', () => setLinesPanelOpen(false))
+
+    linesPanel.addEventListener('click', (event) => {
+      const card = (event.target as HTMLElement).closest<HTMLElement>('.line-card')
+      if (!card) return
+      const line = result.lines.find((candidate) => candidate.id === card.dataset.lineId)
+      if (!line) return
+      mapController?.focusLine(line)
+      openLineDetail(line)
+    })
+
+    document.querySelectorAll<HTMLButtonElement>('.map-filters button').forEach((button) => {
       button.addEventListener('click', () => {
-        document.querySelectorAll('.filters button').forEach((candidate) => candidate.classList.remove('active'))
+        document.querySelectorAll('.map-filters button').forEach((candidate) => candidate.classList.remove('active'))
         button.classList.add('active')
-        const filter = button.dataset.filter
-        document.querySelectorAll<HTMLElement>('.line-card').forEach((card) => {
-          card.hidden = filter !== 'all' && !card.classList.contains(filter!)
+        const filter = button.dataset.filter!
+        mapController?.setStatusFilter(filter)
+        linesPanel.querySelectorAll<HTMLElement>('.line-card').forEach((card) => {
+          card.hidden = filter !== 'all' && !card.classList.contains(filter)
         })
       })
     })
-    initializeResourceMap(result)
+
+    const onKeydown = (event: KeyboardEvent): void => {
+      if (event.key !== 'Escape') return
+      if (drawer.classList.contains('open')) {
+        closeLineDetail()
+        return
+      }
+      if (linesPanel.classList.contains('open')) setLinesPanelOpen(false)
+    }
+    document.addEventListener('keydown', onKeydown)
+    removeReportKeydown = () => {
+      document.removeEventListener('keydown', onKeydown)
+      removeReportKeydown = undefined
+    }
   }
 
   function showError(message: string): void {

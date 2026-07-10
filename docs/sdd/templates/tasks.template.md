@@ -11,4 +11,8 @@
 - [ ] Rodar `npm run build` quando aplicavel
 - [ ] Fazer autorrevisao do diff
 - [ ] Se for visual: subir `npm run dev` e esperar David validar visualmente no browser (gate obrigatorio - sem essa aprovacao o ciclo nao fecha)
-- [ ] Se for visual: apos o OK do David, parar o servidor e marcar a spec como `Done`
+- [ ] Se for visual: apos o OK do David, parar o servidor
+- [ ] Marcar a spec como `Done`
+- [ ] Preparar commits: se houver varios assuntos, separar em commits distintos, sempre com mensagem clara
+- [ ] Fazer commit e push da branch
+- [ ] Abrir PR da branch para `main` no GitHub

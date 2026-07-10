@@ -1,0 +1,615 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Veinmetry — Mockup · Relatório full-map como padrão</title>
+<link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
+<style>
+  /* ===== tokens do app ===== */
+  :root {
+    color-scheme: dark;
+    --bg: #101411;
+    --surface: #171c18;
+    --surface-2: #202620;
+    --text: #edf2eb;
+    --muted: #95a097;
+    --line: #323a33;
+    --acid: #b8f34a;
+    --acid-ink: #192208;
+    --danger: #ff725e;
+    --danger-bg: #2a1916;
+    --warning: #efb65b;
+    --radius: 14px;
+    font-family: Inter, ui-sans-serif, system-ui, -apple-system, 'Segoe UI', sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--text); }
+  h1, h2 { font-weight: 700; letter-spacing: -.02em; }
+  .eyebrow { margin: 0; font: 600 12px/1 'DM Mono', ui-monospace, monospace; letter-spacing: .16em; text-transform: uppercase; color: var(--acid); }
+  button { font-family: inherit; }
+
+  .mockup-banner {
+    position: fixed; left: 50%; bottom: 14px; transform: translateX(-50%); z-index: 5000;
+    padding: 8px 16px; border-radius: 999px;
+    background: var(--acid); color: var(--acid-ink);
+    font: 600 11px/1.4 'DM Mono', ui-monospace, monospace; letter-spacing: .06em; text-transform: uppercase;
+    box-shadow: 0 10px 30px rgba(0,0,0,.4); pointer-events: none;
+  }
+
+  /* ===== views ===== */
+  .view { display: none; }
+  body[data-view="landing"] #view-landing { display: block; }
+  body[data-view="loading"] #view-loading { display: grid; }
+  body[data-view="report"] #view-report { display: grid; }
+  body[data-view="report"] { overflow: hidden; }
+
+  /* ===== landing (igual à de hoje) ===== */
+  .topbar { width: min(1180px, calc(100% - 40px)); margin: auto; padding: 24px 0; display: flex; align-items: center; justify-content: space-between; }
+  .brand { font: 800 26px Inter; letter-spacing: -.03em; color: var(--text); text-decoration: none; background: none; border: 0; cursor: pointer; }
+  .theme-toggle { width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 50%; background: var(--surface); color: var(--text); cursor: pointer; font-size: 20px; }
+  .hero { width: min(850px, calc(100% - 40px)); margin: 7vh auto 0; text-align: center; }
+  .hero h1 { font-size: clamp(40px, 6vw, 64px); margin: 16px 0 12px; }
+  .hero h1 span { color: var(--muted); }
+  .lede { max-width: 670px; margin: 0 auto 36px; color: var(--muted); font-size: 19px; line-height: 1.65; }
+  .dropzone {
+    min-height: 236px; display: flex; flex-direction: column; justify-content: center; align-items: center; gap: 9px;
+    border: 1px dashed #657064; border-radius: 18px;
+    background: linear-gradient(145deg, color-mix(in srgb, var(--surface) 90%, var(--acid)), var(--surface));
+    cursor: pointer; transition: border-color .2s, transform .2s;
+  }
+  .dropzone:hover { border-color: var(--acid); transform: translateY(-2px); }
+  .drop-icon { display: grid; place-items: center; width: 52px; height: 52px; margin-bottom: 7px; border-radius: 50%; background: var(--acid); color: var(--acid-ink); font: 500 28px 'DM Mono', ui-monospace, monospace; }
+  .dropzone small { color: var(--muted); }
+  .privacy-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 1px; max-width: 760px; margin: 24px auto 0; overflow: hidden; border: 1px solid var(--line); border-radius: 14px; background: var(--line); text-align: left; }
+  .privacy-strip div { background: var(--surface); padding: 16px 18px; }
+  .privacy-strip span { display: block; color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .privacy-strip strong { font-size: 14px; }
+  footer { margin: 60px 0 40px; text-align: center; color: var(--muted); font-size: 13px; }
+
+  /* ===== loading (igual à de hoje, encurtada) ===== */
+  #view-loading { min-height: 100vh; place-content: center; justify-items: center; text-align: center; padding: 30px; }
+  .loader-node { width: 88px; height: 88px; border: 2px solid var(--line); border-radius: 50%; position: relative; margin-bottom: 26px; animation: pulse 1.8s ease infinite; }
+  .loader-node::before { content: ''; position: absolute; width: 22px; height: 22px; left: 31px; top: 31px; border-radius: 50%; background: var(--acid); }
+  @keyframes pulse { 50% { border-color: var(--acid); } }
+  #view-loading h1 { max-width: 720px; font-size: clamp(34px, 5vw, 54px); margin: 14px 0; }
+  #progress-message { color: var(--muted); }
+  .progress-track { width: min(460px, 80vw); height: 6px; background: var(--surface-2); border-radius: 5px; margin-top: 20px; overflow: hidden; }
+  .progress-track span { display: block; width: 0; height: 100%; background: var(--acid); transition: width .3s; }
+
+  /* ===== NOVO: relatório full-map (a tela padrão pós-análise) ===== */
+  #view-report { position: fixed; inset: 0; grid-template-rows: auto 1fr; background: var(--bg); }
+
+  .report-bar {
+    display: flex; align-items: center; gap: 18px; flex-wrap: wrap;
+    padding: 10px 18px; border-bottom: 1px solid var(--line); background: var(--surface);
+  }
+  .report-bar .brand { font-size: 21px; }
+  .report-bar .save-meta { display: flex; flex-direction: column; gap: 2px; border-left: 1px solid var(--line); padding-left: 18px; }
+  .report-bar .save-meta .eyebrow { font-size: 10px; }
+  .report-bar .save-meta strong { font-size: 14px; }
+
+  .summary-chips { display: flex; gap: 8px; flex-wrap: wrap; }
+  .summary-chips span {
+    display: inline-flex; align-items: baseline; gap: 6px; padding: 7px 12px;
+    border: 1px solid var(--line); border-radius: 10px; background: var(--surface-2);
+    color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .06em;
+  }
+  .summary-chips b { font: 500 16px 'DM Mono', ui-monospace, monospace; color: var(--text); }
+  .summary-chips .bad b { color: var(--danger); }
+
+  .report-bar .spacer { flex: 1; }
+  .new-file { border: 1px solid var(--line); background: transparent; color: var(--text); border-radius: 999px; padding: 9px 16px; cursor: pointer; font-size: 12.5px; white-space: nowrap; }
+  .new-file:hover { border-color: var(--text); }
+
+  .report-body { position: relative; min-height: 0; }
+  #report-map { position: absolute; inset: 0; background: #0e1511; }
+
+  /* barra de ferramentas flutuante sobre o mapa: filtros + lista */
+  .map-toolbar {
+    position: absolute; z-index: 1000; top: 12px; left: 54px; right: 12px;
+    display: flex; align-items: center; gap: 10px; pointer-events: none;
+  }
+  .map-toolbar > * { pointer-events: auto; }
+  .lines-toggle {
+    display: inline-flex; align-items: center; gap: 8px;
+    padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(4px);
+    color: var(--text); font: 600 12.5px Inter; cursor: pointer;
+    box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+  .lines-toggle:hover, .lines-toggle.active { border-color: var(--acid); color: var(--acid); }
+  .lines-toggle b { font: 500 14px 'DM Mono', ui-monospace, monospace; }
+  .map-filters { display: flex; gap: 6px; overflow-x: auto; padding: 2px; }
+  .map-filters button {
+    white-space: nowrap; border: 1px solid var(--line); border-radius: 999px; padding: 8px 13px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(4px);
+    color: var(--text); cursor: pointer; font-size: 12px; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  .map-filters button.active { background: var(--text); color: var(--bg); border-color: var(--text); }
+  .map-toolbar .spacer { flex: 1; }
+  .map-legend {
+    display: flex; flex-wrap: wrap; gap: 8px 14px; align-items: center;
+    padding: 9px 14px; border: 1px solid var(--line); border-radius: 10px;
+    background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(4px);
+    color: var(--muted); font-size: 11.5px; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+  }
+  .map-legend span { display: inline-flex; align-items: center; gap: 6px; white-space: nowrap; }
+  .map-legend i { width: 9px; height: 9px; border-radius: 50%; border: 2px solid var(--acid); display: inline-block; }
+  .map-legend .deficit { border-color: var(--danger); }
+  .map-legend .balanced { border-color: var(--warning); }
+  .map-legend .untraceable { border-color: var(--warning); background: color-mix(in srgb, var(--warning) 25%, transparent); }
+
+  /* aviso global compacto sobre o mapa */
+  .map-warning {
+    position: absolute; z-index: 1000; left: 50%; bottom: 14px; transform: translateX(-50%);
+    max-width: min(680px, calc(100% - 28px));
+    padding: 9px 16px; border: 1px solid color-mix(in srgb, var(--warning) 45%, var(--line));
+    border-radius: 10px; background: color-mix(in srgb, var(--surface) 92%, transparent); backdrop-filter: blur(4px);
+    color: var(--warning); font-size: 12.5px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,.35);
+  }
+
+  /* ===== painel esquerdo: lista de linhas ===== */
+  .lines-panel {
+    position: absolute; z-index: 1100; top: 58px; left: 12px; bottom: 14px;
+    width: min(390px, calc(100vw - 24px));
+    display: flex; flex-direction: column;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px);
+    box-shadow: 0 24px 60px rgba(0,0,0,.5); overflow: hidden;
+    transform: translateX(calc(-100% - 20px)); opacity: 0; pointer-events: none;
+    transition: transform .25s cubic-bezier(.2,.8,.25,1), opacity .2s;
+  }
+  .lines-panel.open { transform: translateX(0); opacity: 1; pointer-events: auto; }
+  .lines-panel-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .lines-panel-head p { margin: 0; color: var(--muted); font: 500 10px 'DM Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+  .lines-panel-scroll { overflow-y: auto; }
+  .lines-panel .line-card { cursor: pointer; }
+  .lines-panel .line-card:hover { background: color-mix(in srgb, var(--surface-2) 60%, transparent); }
+  .lines-panel .line-card.map-selected { outline: 2px solid var(--acid); outline-offset: -2px; }
+
+  /* ===== drawer direito: detalhe da linha ===== */
+  .detail-drawer {
+    position: absolute; z-index: 1100; top: 58px; right: 12px; bottom: 14px;
+    width: min(400px, calc(100vw - 24px));
+    display: flex; flex-direction: column;
+    border: 1px solid var(--line); border-radius: var(--radius);
+    background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(6px);
+    box-shadow: 0 24px 60px rgba(0,0,0,.5); overflow: hidden;
+    transform: translateX(calc(100% + 20px)); opacity: 0; pointer-events: none;
+    transition: transform .25s cubic-bezier(.2,.8,.25,1), opacity .2s;
+  }
+  .detail-drawer.open { transform: translateX(0); opacity: 1; pointer-events: auto; }
+  .detail-drawer-scroll { overflow-y: auto; }
+  .panel-head { position: sticky; top: 0; z-index: 1; display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 12px 14px; border-bottom: 1px solid var(--line); background: var(--surface); }
+  .panel-head p { margin: 0; color: var(--muted); font: 500 10px 'DM Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: .1em; }
+  .panel-close { display: grid; place-items: center; width: 30px; height: 30px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 15px; line-height: 1; cursor: pointer; }
+  .panel-close:hover { color: var(--text); border-color: var(--text); }
+
+  /* ===== line card (réplica do app) ===== */
+  .line-card { background: var(--surface); border: 1px solid var(--line); border-left: 4px solid var(--acid); border-radius: 12px; padding: 24px; }
+  .line-card.deficit { border-left-color: var(--danger); }
+  .line-card.balanced, .line-card.untraceable { border-left-color: var(--warning); }
+  .card-head { display: flex; justify-content: space-between; align-items: start; gap: 16px; }
+  .card-kicker { margin: 0 0 4px; color: var(--muted); font: 500 11px 'DM Mono', ui-monospace, monospace; text-transform: uppercase; letter-spacing: .08em; }
+  .card-head h2 { margin: 0; font-size: 25px; letter-spacing: 0; }
+  .status-pill { padding: 6px 10px; border-radius: 999px; color: var(--acid); background: color-mix(in srgb, var(--acid) 10%, transparent); font: 500 11px 'DM Mono', ui-monospace, monospace; white-space: nowrap; }
+  .deficit .status-pill { color: var(--danger); background: var(--danger-bg); }
+  .balanced .status-pill, .untraceable .status-pill { color: var(--warning); background: color-mix(in srgb, var(--warning) 12%, transparent); }
+  .balance-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px; margin: 22px 0; }
+  .balance-grid div { background: var(--surface-2); border-radius: 12px; padding: 15px; display: flex; flex-direction: column; }
+  .balance-grid span { color: var(--muted); font-size: 11px; text-transform: uppercase; letter-spacing: .08em; }
+  .balance-grid strong { margin-top: 4px; font: 500 22px 'DM Mono', ui-monospace, monospace; }
+  .balance-grid small { font-size: 11px; color: var(--muted); }
+  .surplus .balance-grid .net strong { color: var(--acid); }
+  .deficit .balance-grid .net strong { color: var(--danger); }
+  .balanced .balance-grid .net strong { color: var(--warning); }
+  details { border-top: 1px solid var(--line); }
+  summary { padding: 14px 0; cursor: pointer; font-weight: 600; font-size: 13px; }
+  summary span { color: var(--muted); }
+  details ul { list-style: none; padding: 0; margin: 0 0 10px; }
+  details li { display: flex; justify-content: space-between; gap: 20px; padding: 8px 0; color: var(--muted); font-size: 13px; }
+  details li strong { color: var(--text); font-weight: 600; }
+  details li b { color: var(--text); font: 500 12px 'DM Mono', ui-monospace, monospace; white-space: nowrap; }
+  .suggestion { padding: 13px 15px; border-radius: 10px; background: color-mix(in srgb, var(--acid) 8%, transparent); color: var(--acid); font-size: 13px; }
+  .warnings { color: var(--warning); font-size: 12px; }
+  .warnings p { margin: 7px 0; }
+  .muted { color: var(--muted); }
+
+  /* card compacto dentro dos painéis */
+  .detail-drawer .line-card, .lines-panel .line-card { border: 0; border-left: 4px solid var(--acid); border-radius: 0; padding: 16px 14px; background: transparent; border-bottom: 1px solid var(--line); }
+  .detail-drawer .line-card.deficit, .lines-panel .line-card.deficit { border-left-color: var(--danger); }
+  .detail-drawer .line-card.balanced, .detail-drawer .line-card.untraceable,
+  .lines-panel .line-card.balanced, .lines-panel .line-card.untraceable { border-left-color: var(--warning); }
+  .detail-drawer .balance-grid { grid-template-columns: 1fr; gap: 6px; margin: 14px 0; }
+  .detail-drawer .card-head h2 { font-size: 21px; }
+  .lines-panel .balance-grid { grid-template-columns: repeat(3, 1fr); gap: 6px; margin: 12px 0 4px; }
+  .lines-panel .balance-grid strong { font-size: 15px; }
+  .lines-panel .card-head h2 { font-size: 17px; }
+  .lines-panel .line-card details, .lines-panel .line-card .suggestion, .lines-panel .line-card .warnings { display: none; }
+  .locate-btn { display: block; width: calc(100% - 28px); margin: 4px auto 16px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 8px; background: transparent; color: var(--muted); font-size: 12px; cursor: pointer; }
+  .locate-btn:hover { color: var(--text); border-color: var(--text); }
+
+  /* ===== leaflet skin ===== */
+  .leaflet-container { font: inherit; }
+  .leaflet-control-layers, .leaflet-control-zoom a, .leaflet-control-attribution { background: var(--surface) !important; color: var(--text) !important; border-color: var(--line) !important; }
+  .leaflet-control-zoom a { border-bottom-color: var(--line) !important; }
+  .leaflet-control-zoom a:hover { background: var(--surface-2) !important; }
+  .leaflet-tooltip { border: 1px solid var(--line); background: var(--surface); color: var(--text); box-shadow: 0 12px 30px rgba(0,0,0,.4); font: 500 12px/1.4 'DM Mono', ui-monospace, monospace; }
+  .veinmetry-marker { border: 0; background: transparent; }
+  .veinmetry-marker span { display: block; width: 18px; height: 18px; border-radius: 50%; border: 2px solid var(--bg); background: var(--acid); box-shadow: 0 0 0 2px color-mix(in srgb, var(--acid) 65%, transparent), 0 4px 14px rgba(0,0,0,.55); transition: transform .15s; }
+  .veinmetry-marker-deficit span { background: var(--danger); box-shadow: 0 0 0 2px color-mix(in srgb, var(--danger) 75%, transparent), 0 4px 14px rgba(0,0,0,.55); }
+  .veinmetry-marker-balanced span { background: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 75%, transparent), 0 4px 14px rgba(0,0,0,.55); }
+  .veinmetry-marker-untraceable span { background: var(--surface); border-color: var(--warning); box-shadow: 0 0 0 2px color-mix(in srgb, var(--warning) 75%, transparent), 0 4px 14px rgba(0,0,0,.55); }
+  .veinmetry-marker.is-selected span { transform: scale(1.35); border-color: var(--text); }
+  .veinmetry-marker.is-dimmed { opacity: .25; }
+
+  @media (max-width: 760px) {
+    .report-bar .save-meta { display: none; }
+    .summary-chips span { padding: 6px 9px; }
+    .map-toolbar { left: 12px; top: 12px; flex-wrap: wrap; }
+    .map-legend { display: none; }
+    .lines-panel, .detail-drawer { top: 12px; }
+    .privacy-strip { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body data-view="landing">
+
+<div class="mockup-banner">Mockup · fluxo completo — solte um save (clique) e veja o relatório full-map</div>
+
+<!-- ===== VIEW 1: landing (inalterada) ===== -->
+<div id="view-landing" class="view">
+  <header class="topbar">
+    <a class="brand" href="#">Veinmetry</a>
+    <button class="theme-toggle" type="button" aria-label="Alternar tema">◐</button>
+  </header>
+  <section class="hero">
+    <p class="eyebrow">Auditor de recursos · Satisfactory</p>
+    <h1>Seu nódulo dá conta<br><span>da fábrica inteira?</span></h1>
+    <p class="lede">Descubra quanto cada linha extrai, o que ela alimenta e onde falta — usando seu save real, sem enviar o arquivo para servidor algum.</p>
+    <label class="dropzone" tabindex="0" id="dropzone">
+      <span class="drop-icon" aria-hidden="true">↓</span>
+      <strong>Arraste seu arquivo .sav aqui</strong>
+      <span style="color:var(--muted)">ou clique para escolher</span>
+      <small>(mockup: clique para simular a análise)</small>
+    </label>
+    <div class="privacy-strip" aria-label="Escopo e privacidade">
+      <div><span>Processamento</span><strong>100% no navegador</strong></div>
+      <div><span>Entrada</span><strong>Save real do jogador</strong></div>
+      <div><span>Escopo v1</span><strong>Esteiras, lifts e máquinas</strong></div>
+    </div>
+  </section>
+  <footer>Feito para encontrar gargalos antes que eles encontrem você.</footer>
+</div>
+
+<!-- ===== VIEW 2: loading (inalterada) ===== -->
+<div id="view-loading" class="view">
+  <div class="loader-node" aria-hidden="true"></div>
+  <p class="eyebrow">Analisando FABRICA_NORTE_2.sav</p>
+  <h1>Seguindo a rede física do save.</h1>
+  <p id="progress-message">Preparando os dados do jogo.</p>
+  <div class="progress-track" role="progressbar"><span id="progress-bar"></span></div>
+</div>
+
+<!-- ===== VIEW 3: NOVO relatório full-map (padrão pós-análise) ===== -->
+<div id="view-report" class="view">
+  <div class="report-bar">
+    <button class="brand" type="button" title="Nova análise">Veinmetry</button>
+    <div class="save-meta">
+      <p class="eyebrow">FABRICA_NORTE_2.sav · build 372858</p>
+      <strong>Balanço das linhas</strong>
+    </div>
+    <div class="summary-chips" aria-label="Resumo">
+      <span><b>7</b> linhas</span>
+      <span class="bad"><b>2</b> déficit</span>
+      <span><b>1</b> no limite</span>
+      <span><b>13</b> mineradoras</span>
+    </div>
+    <div class="spacer"></div>
+    <button class="new-file" type="button">Analisar outro save</button>
+    <button class="theme-toggle" type="button" aria-label="Alternar tema" style="width:38px;height:38px;font-size:17px">◐</button>
+  </div>
+
+  <div class="report-body">
+    <div id="report-map"></div>
+
+    <div class="map-toolbar">
+      <button id="lines-toggle" class="lines-toggle" type="button"><b>☰</b> Linhas <b style="font-size:12px">7</b></button>
+      <nav id="map-filters" class="map-filters" aria-label="Filtrar nódulos">
+        <button class="active" data-filter="all">Todas</button>
+        <button data-filter="deficit">Déficit</button>
+        <button data-filter="balanced">No limite</button>
+        <button data-filter="surplus">Com folga</button>
+        <button data-filter="untraceable">Não rastreáveis</button>
+      </nav>
+      <div class="spacer"></div>
+      <div class="map-legend" aria-label="Legenda">
+        <span><i class="deficit"></i>Déficit</span>
+        <span><i class="balanced"></i>No limite</span>
+        <span><i></i>Com folga</span>
+        <span><i class="untraceable"></i>Não rastreável</span>
+      </div>
+    </div>
+
+    <aside id="lines-panel" class="lines-panel" aria-label="Todas as linhas">
+      <div class="lines-panel-head">
+        <p>Todas as linhas · clique para localizar no mapa</p>
+        <button class="panel-close" type="button" aria-label="Fechar lista">×</button>
+      </div>
+      <div id="lines-panel-scroll" class="lines-panel-scroll"></div>
+    </aside>
+
+    <aside id="detail-drawer" class="detail-drawer" aria-live="polite"></aside>
+
+    <div class="map-warning">⚠ Este save usa mods; construções de mods podem não ser rastreadas na v1.</div>
+  </div>
+</div>
+
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+/* ===== configuração idêntica ao app (src/app/map.ts) ===== */
+const scim = { build: 'Stable', version: 1783579096, backgroundSize: 40960, zoomRatio: 8, innerMin: 4096, innerMax: 36864, west: -418448.91503875, east: 519051.91503875, north: -468750, south: 468750 };
+
+function tileLayer(layer) {
+  return L.tileLayer(`https://static.satisfactory-calculator.com/imgMap/${layer}/${scim.build}/{z}/{x}/{y}.png?v=${scim.version}`, {
+    attribution: 'Map tiles © Satisfactory Calculator / Coffee Stain Studios',
+    maxNativeZoom: 8, maxZoom: 12, minNativeZoom: 3, minZoom: 4, noWrap: true, referrerPolicy: 'no-referrer', tileSize: 256,
+  });
+}
+function rasterPoint(x, y) {
+  const w = scim.east - scim.west, h = scim.south - scim.north;
+  return [ ((x - scim.west) / w) * scim.backgroundSize, ((y - scim.north) / h) * scim.backgroundSize ];
+}
+function markerIcon(status) {
+  return L.divIcon({ className: `veinmetry-marker veinmetry-marker-${status}`, html: '<span></span>', iconAnchor: [9, 9], iconSize: [18, 18] });
+}
+
+/* ===== save simulado ===== */
+const LINES = [
+  {
+    id: 'copper-1', itemName: 'Copper Ore', status: 'deficit', merged: true,
+    extraction: 240, demand: 330, balance: -90,
+    sources: [
+      { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: -32000, y: 152000 },
+      { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: 9500, y: 161000 },
+    ],
+    consumers: [
+      { machine: 'Smelter ×8', recipe: 'Copper Ingot', clock: 1, demand: 240 },
+      { machine: 'Constructor ×3', recipe: 'Wire', clock: 1, demand: 90 },
+    ],
+    suggestion: 'Suba o clock das mineradoras para 138% ou conecte o nódulo puro a oeste da base.',
+    warnings: [],
+  },
+  {
+    id: 'iron-1', itemName: 'Iron Ore', status: 'surplus', merged: true,
+    extraction: 480, demand: 300, balance: 180,
+    sources: [
+      { miner: 'Miner Mk2', clock: 1, purity: 'pure', rate: 240, x: -108000, y: 118000 },
+      { miner: 'Miner Mk2', clock: 1, purity: 'pure', rate: 240, x: -96500, y: 131500 },
+    ],
+    consumers: [ { machine: 'Smelter ×10', recipe: 'Iron Ingot', clock: 1, demand: 300 } ],
+    suggestion: null, warnings: [],
+  },
+  {
+    id: 'limestone-1', itemName: 'Limestone', status: 'balanced', merged: false,
+    extraction: 240, demand: 240, balance: 0,
+    sources: [ { miner: 'Miner Mk2', clock: 1, purity: 'pure', rate: 240, x: 152000, y: 78000 } ],
+    consumers: [ { machine: 'Constructor ×8', recipe: 'Concrete', clock: 1, demand: 240 } ],
+    suggestion: 'Qualquer máquina extra vai gerar déficit; considere um segundo nódulo.', warnings: [],
+  },
+  {
+    id: 'coal-1', itemName: 'Coal', status: 'surplus', merged: true,
+    extraction: 420, demand: 315, balance: 105,
+    sources: [
+      { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: 205000, y: -12000 },
+      { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: 214500, y: -4500 },
+      { miner: 'Miner Mk2', clock: 1.5, purity: 'normal', rate: 180, x: 226000, y: -21000 },
+    ],
+    consumers: [ { machine: 'Coal Generator ×21', recipe: 'Energia', clock: 1, demand: 315 } ],
+    suggestion: null, warnings: [],
+  },
+  {
+    id: 'caterium-1', itemName: 'Caterium Ore', status: 'untraceable', merged: false,
+    extraction: 120, demand: 0, balance: 120,
+    sources: [
+      { miner: 'Miner Mk1', clock: 1, purity: 'normal', rate: 60, x: 289000, y: 96000 },
+      { miner: 'Miner Mk1', clock: 1, purity: 'normal', rate: 60, x: 297500, y: 104000 },
+    ],
+    consumers: [],
+    suggestion: null,
+    warnings: ['A linha atravessa um Industrial Storage; consumidores após o armazém não são rastreáveis na v1.'],
+  },
+  {
+    id: 'quartz-1', itemName: 'Raw Quartz', status: 'deficit', merged: false,
+    extraction: 120, demand: 150, balance: -30,
+    sources: [ { miner: 'Miner Mk2', clock: 0.5, purity: 'pure', rate: 120, x: 65000, y: -38000 } ],
+    consumers: [ { machine: 'Constructor ×4', recipe: 'Quartz Crystal', clock: 1, demand: 150 } ],
+    suggestion: 'A mineradora está a 50%; subir para 63% zera o déficit sem novo nódulo.',
+    warnings: [],
+  },
+  {
+    id: 'bauxite-1', itemName: 'Bauxite', status: 'surplus', merged: false,
+    extraction: 120, demand: 60, balance: 60,
+    sources: [ { miner: 'Miner Mk2', clock: 1, purity: 'normal', rate: 120, x: -215000, y: -95000 } ],
+    consumers: [ { machine: 'Refinery ×1', recipe: 'Alumina Solution', clock: 1, demand: 60 } ],
+    suggestion: null, warnings: [],
+  },
+];
+
+const STATUS_TEXT = { deficit: 'Déficit', balanced: 'No limite', surplus: 'Com folga', untraceable: 'Não rastreável' };
+const PURITY_TEXT = { pure: 'puro', normal: 'normal', impure: 'impuro' };
+const fmt = (n) => n.toLocaleString('pt-BR');
+
+function lineCardView(line) {
+  const sign = line.balance > 0 ? '+' : '';
+  const sources = line.sources.map((s) => `
+    <li><span><strong>${s.miner}</strong> · ${Math.round(s.clock * 100)}% · ${PURITY_TEXT[s.purity]}</span><b>${fmt(s.rate)}/min</b></li>`).join('');
+  const consumers = line.consumers.length
+    ? line.consumers.map((c) => `
+      <li><span><strong>${c.machine}</strong> · ${c.recipe} · ${Math.round(c.clock * 100)}%</span><b>${fmt(c.demand)}/min</b></li>`).join('')
+    : '<li class="muted">Nenhum consumidor rastreável nesta linha.</li>';
+  return `
+    <article class="line-card ${line.status}" data-line-id="${line.id}">
+      <div class="card-head">
+        <div><p class="card-kicker">${line.merged ? `${line.sources.length} nódulos agrupados` : 'Linha de suprimento'}</p><h2>${line.itemName}</h2></div>
+        <span class="status-pill">${STATUS_TEXT[line.status]}</span>
+      </div>
+      <div class="balance-grid">
+        <div><span>Extração</span><strong>${fmt(line.extraction)}<small>/min</small></strong></div>
+        <div><span>Demanda</span><strong>${fmt(line.demand)}<small>/min</small></strong></div>
+        <div class="net"><span>Saldo</span><strong>${sign}${fmt(line.balance)}<small>/min</small></strong></div>
+      </div>
+      <details><summary>Origens <span>${line.sources.length}</span></summary><ul>${sources}</ul></details>
+      <details open><summary>Consumidores <span>${line.consumers.length}</span></summary><ul>${consumers}</ul></details>
+      ${line.suggestion ? `<p class="suggestion">↳ ${line.suggestion}</p>` : ''}
+      ${line.warnings.length ? `<div class="warnings">${line.warnings.map((w) => `<p>⚠ ${w}</p>`).join('')}</div>` : ''}
+    </article>`;
+}
+
+/* ===== fluxo landing → loading → relatório ===== */
+const LOADING_STEPS = [
+  ['Lendo o cabeçalho do save.', 15],
+  ['Descomprimindo corpos de objeto.', 38],
+  ['Seguindo esteiras e lifts.', 64],
+  ['Casando mineradoras com receitas.', 86],
+  ['Montando o balanço das linhas.', 100],
+];
+
+document.getElementById('dropzone').addEventListener('click', () => {
+  document.body.dataset.view = 'loading';
+  const msg = document.getElementById('progress-message');
+  const bar = document.getElementById('progress-bar');
+  let i = 0;
+  const tick = () => {
+    if (i >= LOADING_STEPS.length) { showReport(); return; }
+    msg.textContent = LOADING_STEPS[i][0];
+    bar.style.width = LOADING_STEPS[i][1] + '%';
+    i += 1;
+    setTimeout(tick, 420);
+  };
+  tick();
+});
+
+/* ===== relatório full-map ===== */
+let reportMap = null;
+let markersByLine = null;
+const drawer = document.getElementById('detail-drawer');
+const linesPanel = document.getElementById('lines-panel');
+const linesToggle = document.getElementById('lines-toggle');
+
+function showReport() {
+  document.body.dataset.view = 'report';
+  if (!reportMap) buildReportMap();
+  requestAnimationFrame(() => {
+    reportMap.map.invalidateSize();
+    reportMap.map.fitBounds(reportMap.innerBounds, { padding: [40, 40] });
+  });
+}
+
+function buildReportMap() {
+  const map = L.map('report-map', { attributionControl: false, crs: L.CRS.Simple, maxBoundsViscosity: 1, scrollWheelZoom: true, zoomControl: true });
+  const innerBottomLeft = map.unproject([scim.innerMin, scim.innerMax], scim.zoomRatio);
+  const innerTopRight = map.unproject([scim.innerMax, scim.innerMin], scim.zoomRatio);
+  const innerBounds = L.latLngBounds(innerBottomLeft, innerTopRight);
+  const realistic = tileLayer('realisticLayer');
+  const game = tileLayer('gameLayer');
+  map.setMaxBounds(innerBounds);
+  realistic.addTo(map);
+  L.control.layers({ Realistic: realistic, Game: game }, undefined, { position: 'bottomright' }).addTo(map);
+  L.control.attribution({ prefix: false }).addTo(map);
+  map.fitBounds(innerBounds, { padding: [40, 40] });
+
+  markersByLine = new Map();
+  for (const line of LINES) {
+    for (const s of line.sources) {
+      const latLng = map.unproject(rasterPoint(s.x, s.y), scim.zoomRatio);
+      const title = `${line.itemName} · ${s.miner} · ${STATUS_TEXT[line.status]} · ${fmt(s.rate)}/min`;
+      const marker = L.marker(latLng, { icon: markerIcon(line.status), keyboard: true, title });
+      marker.bindTooltip(title, { direction: 'auto', opacity: 0.95 });
+      marker.on('click', () => openDetail(line));
+      marker.addTo(map);
+      const list = markersByLine.get(line.id) ?? [];
+      list.push(marker);
+      markersByLine.set(line.id, list);
+    }
+  }
+
+  reportMap = { map, innerBounds };
+  renderLinesPanel();
+}
+
+function highlight(lineId) {
+  for (const [id, markers] of markersByLine) {
+    for (const m of markers) m.getElement()?.classList.toggle('is-selected', id === lineId);
+  }
+  linesPanel.querySelectorAll('.line-card').forEach((c) => c.classList.toggle('map-selected', c.dataset.lineId === lineId));
+}
+
+function openDetail(line) {
+  drawer.innerHTML = `
+    <div class="panel-head"><p>Linha selecionada</p><button type="button" class="panel-close" aria-label="Fechar detalhes">×</button></div>
+    <div class="detail-drawer-scroll">${lineCardView(line)}</div>`;
+  drawer.classList.add('open');
+  drawer.querySelector('.panel-close').onclick = closeDetail;
+  highlight(line.id);
+}
+function closeDetail() {
+  drawer.classList.remove('open');
+  highlight(null);
+}
+
+/* painel esquerdo com todas as linhas */
+function renderLinesPanel() {
+  const scroll = document.getElementById('lines-panel-scroll');
+  scroll.innerHTML = LINES.map(lineCardView).join('');
+  scroll.addEventListener('click', (e) => {
+    const card = e.target.closest('.line-card');
+    if (!card) return;
+    const line = LINES.find((l) => l.id === card.dataset.lineId);
+    if (!line) return;
+    const markers = markersByLine.get(line.id) ?? [];
+    if (markers.length) {
+      const group = L.featureGroup(markers);
+      reportMap.map.fitBounds(group.getBounds().pad(1.4), { maxZoom: 7 });
+    }
+    openDetail(line);
+  });
+}
+
+linesToggle.addEventListener('click', () => {
+  const open = linesPanel.classList.toggle('open');
+  linesToggle.classList.toggle('active', open);
+});
+linesPanel.querySelector('.panel-close').addEventListener('click', () => {
+  linesPanel.classList.remove('open');
+  linesToggle.classList.remove('active');
+});
+
+/* filtros esmaecem os nódulos e escondem cards */
+document.getElementById('map-filters').addEventListener('click', (e) => {
+  const btn = e.target.closest('button[data-filter]');
+  if (!btn) return;
+  document.querySelectorAll('#map-filters button').forEach((b) => b.classList.remove('active'));
+  btn.classList.add('active');
+  const status = btn.dataset.filter;
+  for (const line of LINES) {
+    const show = status === 'all' || line.status === status;
+    for (const m of markersByLine.get(line.id) ?? []) m.getElement()?.classList.toggle('is-dimmed', !show);
+    const card = linesPanel.querySelector(`.line-card[data-line-id="${line.id}"]`);
+    if (card) card.style.display = show ? '' : 'none';
+  }
+});
+
+/* esc fecha painéis; brand e "analisar outro" voltam pra landing */
+document.addEventListener('keydown', (e) => {
+  if (e.key !== 'Escape' || document.body.dataset.view !== 'report') return;
+  if (drawer.classList.contains('open')) { closeDetail(); return; }
+  if (linesPanel.classList.contains('open')) { linesPanel.classList.remove('open'); linesToggle.classList.remove('active'); }
+});
+document.querySelectorAll('#view-report .brand, #view-report .new-file').forEach((el) => {
+  el.addEventListener('click', () => { document.body.dataset.view = 'landing'; closeDetail(); });
+});
+</script>
+</body>
+</html>

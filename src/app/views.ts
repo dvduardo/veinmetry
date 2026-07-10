@@ -28,6 +28,7 @@ export function landingView(baseUrl: string): string {
         <span>ou clique para escolher</span>
         <small>O processamento acontece somente neste navegador.</small>
       </label>
+      <button class="demo-cta" type="button">▶ Ver demonstração com um save de exemplo</button>
       <div class="privacy-strip" aria-label="Escopo e privacidade">
         <div><span>Processamento</span><strong>100% no navegador</strong></div>
         <div><span>Entrada</span><strong>Save real do jogador</strong></div>
@@ -59,69 +60,75 @@ export function errorView(message: string): string {
     </section>`
 }
 
-export function reportView(result: AnalysisResult): string {
-  const deficit = result.lines.filter((line) => line.status === 'deficit').length
-  const balanced = result.lines.filter((line) => line.status === 'balanced').length
-
-  return `
-    <header class="topbar report-topbar">
-      <button class="brand brand-button" type="button" aria-label="Nova análise">${brandMarkup()}</button>
-      <button class="theme-toggle" type="button" aria-label="Alternar tema">◐</button>
-    </header>
-    <section class="report-shell">
-      <div class="report-heading">
-        <div><p class="eyebrow">${escapeHtml(result.saveName)} · build ${result.buildVersion}</p><h1>Balanço <span>das linhas</span></h1></div>
-        <button class="new-file" type="button">Analisar outro save</button>
-      </div>
-      <div class="summary-strip">
-        <div><strong>${result.stats.lines}</strong><span>linhas</span></div>
-        <div class="bad"><strong>${deficit}</strong><span>em déficit</span></div>
-        <div><strong>${balanced}</strong><span>no limite</span></div>
-        <div><strong>${result.stats.miners}</strong><span>mineradoras</span></div>
-      </div>
-      ${result.warnings.length ? `<div class="global-warning">${result.warnings.map(escapeHtml).join(' ')}</div>` : ''}
-      ${resourceMapView(result)}
-      <nav class="filters" aria-label="Filtrar linhas">
-        <button class="active" data-filter="all">Todas</button>
-        <button data-filter="deficit">Déficit</button>
-        <button data-filter="balanced">No limite</button>
-        <button data-filter="surplus">Com folga</button>
-        <button data-filter="untraceable">Não rastreáveis</button>
-      </nav>
-      <div class="line-list">${result.lines.map(lineCardView).join('')}</div>
-      ${result.lines.length ? '' : '<div class="empty-state"><h2>Nenhuma linha encontrada</h2><p>O save não contém mineradoras conectadas por esteiras reconhecidas pela v1.</p></div>'}
-    </section>
-  `
-}
-
-function resourceMapView(result: AnalysisResult): string {
-  const hasPins = result.lines.some((line) =>
+export function hasMappableSources(result: AnalysisResult): boolean {
+  return result.lines.some((line) =>
     line.sources.some((source) => typeof source.x === 'number' && typeof source.y === 'number'),
   )
-  if (!hasPins) return ''
-
-  return `
-    <section class="resource-map-panel" aria-label="Mapa dos nódulos usados no save">
-      <div class="resource-map-head">
-        <div><p class="eyebrow">Mapa vanilla</p><h2>Nódulos usados por este save</h2></div>
-        <div class="map-legend" aria-label="Legenda">
-          <span><i class="deficit"></i>Déficit</span>
-          <span><i class="balanced"></i>No limite</span>
-          <span><i class="surplus"></i>Com folga</span>
-          <span><i class="untraceable"></i>Não rastreável</span>
-        </div>
-      </div>
-      <div class="resource-map-body">
-        <div id="resource-map" class="resource-map"></div>
-        <aside id="map-detail" class="map-detail" aria-live="polite">
-          ${mapDetailEmptyView()}
-        </aside>
-      </div>
-    </section>`
 }
 
-export function mapDetailEmptyView(): string {
-  return '<p class="map-detail-empty">Clique num nódulo no mapa para ver os detalhes da linha aqui, sem sair do mapa.</p>'
+export function reportView(result: AnalysisResult, demo: boolean): string {
+  const deficit = result.lines.filter((line) => line.status === 'deficit').length
+  const balanced = result.lines.filter((line) => line.status === 'balanced').length
+  const hasMap = hasMappableSources(result)
+
+  return `
+    <div class="report-screen">
+      <header class="report-bar">
+        <button class="brand brand-button" type="button" aria-label="Nova análise">${brandMarkup()}</button>
+        <div class="save-meta">
+          <p class="eyebrow">${escapeHtml(result.saveName)} · build ${result.buildVersion}</p>
+          <strong>Balanço das linhas</strong>
+        </div>
+        <div class="summary-chips" aria-label="Resumo">
+          <span><b>${result.stats.lines}</b> linhas</span>
+          <span class="bad"><b>${deficit}</b> déficit</span>
+          <span><b>${balanced}</b> no limite</span>
+          <span><b>${result.stats.miners}</b> mineradoras</span>
+        </div>
+        <div class="bar-spacer"></div>
+        ${demo ? '<span class="demo-pill">● Dados de exemplo</span>' : ''}
+        <button class="new-file" type="button">${demo ? 'Analisar meu save' : 'Analisar outro save'}</button>
+        <button class="theme-toggle" type="button" aria-label="Alternar tema" title="Alternar tema">◐</button>
+      </header>
+      <section class="report-body">
+        ${hasMap
+          ? '<div id="resource-map" class="report-map" aria-label="Mapa dos nódulos usados no save"></div>'
+          : '<div class="map-empty-state"><h2>Nenhum nódulo mapeável</h2><p>O save não contém mineradoras com posição conhecida; explore as linhas pelo painel ao lado.</p></div>'}
+        <div class="map-toolbar">
+          <button id="lines-toggle" class="lines-toggle" type="button" aria-expanded="${hasMap ? 'false' : 'true'}" aria-controls="lines-panel">
+            <b>☰</b> Linhas <b class="lines-count">${result.stats.lines}</b>
+          </button>
+          <nav class="map-filters" aria-label="Filtrar linhas">
+            <button class="active" data-filter="all">Todas</button>
+            <button data-filter="deficit">Déficit</button>
+            <button data-filter="balanced">No limite</button>
+            <button data-filter="surplus">Com folga</button>
+            <button data-filter="untraceable">Não rastreáveis</button>
+          </nav>
+          <div class="bar-spacer"></div>
+          <div class="map-legend" aria-label="Legenda">
+            <span><i class="deficit"></i>Déficit</span>
+            <span><i class="balanced"></i>No limite</span>
+            <span><i class="surplus"></i>Com folga</span>
+            <span><i class="untraceable"></i>Não rastreável</span>
+          </div>
+        </div>
+        <aside id="lines-panel" class="lines-panel ${hasMap ? '' : 'open'}" aria-label="Todas as linhas">
+          <div class="panel-head">
+            <p>Todas as linhas · clique para localizar no mapa</p>
+            <button type="button" class="panel-close" aria-label="Fechar lista">×</button>
+          </div>
+          <div class="lines-panel-scroll">
+            ${result.lines.length
+              ? result.lines.map(lineCardView).join('')
+              : '<div class="empty-state"><h2>Nenhuma linha encontrada</h2><p>O save não contém mineradoras conectadas por esteiras reconhecidas pela v1.</p></div>'}
+          </div>
+        </aside>
+        <aside id="detail-drawer" class="detail-drawer" aria-live="polite"></aside>
+        ${result.warnings.length ? `<div class="map-warning">⚠ ${result.warnings.map(escapeHtml).join(' ')}</div>` : ''}
+      </section>
+    </div>
+  `
 }
 
 export function lineCardView(line: LineBalance): string {
