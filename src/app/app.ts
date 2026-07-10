@@ -1,4 +1,5 @@
 import type { AnalysisResult, GameData, WorkerResponse } from '../types'
+import { initializeResourceMap } from './map'
 import { errorView, landingView, loadingView, reportView } from './views'
 
 let gameDataPromise: Promise<GameData> | undefined
@@ -93,6 +94,7 @@ export function startApp(app: HTMLElement): void {
         })
       })
     })
+    initializeResourceMap(result)
   }
 
   function showError(message: string): void {

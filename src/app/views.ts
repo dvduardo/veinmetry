@@ -71,6 +71,7 @@ export function reportView(result: AnalysisResult): string {
         <div><strong>${result.stats.miners}</strong><span>mineradoras</span></div>
       </div>
       ${result.warnings.length ? `<div class="global-warning">${result.warnings.map(escapeHtml).join(' ')}</div>` : ''}
+      ${resourceMapView(result)}
       <nav class="filters" aria-label="Filtrar linhas">
         <button class="active" data-filter="all">Todas</button>
         <button data-filter="deficit">Déficit</button>
@@ -81,6 +82,27 @@ export function reportView(result: AnalysisResult): string {
       ${result.lines.length ? '' : '<div class="empty-state"><h2>Nenhuma linha encontrada</h2><p>O save não contém mineradoras conectadas por esteiras reconhecidas pela v1.</p></div>'}
     </section>
   `
+}
+
+function resourceMapView(result: AnalysisResult): string {
+  const hasPins = result.lines.some((line) =>
+    line.sources.some((source) => typeof source.x === 'number' && typeof source.y === 'number'),
+  )
+  if (!hasPins) return ''
+
+  return `
+    <section class="resource-map-panel" aria-label="Mapa dos nódulos usados no save">
+      <div class="resource-map-head">
+        <div><p class="eyebrow">Mapa vanilla</p><h2>Nódulos usados por este save</h2></div>
+        <div class="map-legend" aria-label="Legenda">
+          <span><i class="deficit"></i>Déficit</span>
+          <span><i class="balanced"></i>No limite</span>
+          <span><i class="surplus"></i>Com folga</span>
+          <span><i class="untraceable"></i>Não rastreável</span>
+        </div>
+      </div>
+      <div id="resource-map" class="resource-map"></div>
+    </section>`
 }
 
 function lineCardView(line: LineBalance): string {
@@ -102,7 +124,7 @@ function lineCardView(line: LineBalance): string {
     : ''
 
   return `
-    <article class="line-card ${line.status}">
+    <article class="line-card ${line.status}" data-line-id="${escapeHtml(line.id)}">
       <div class="card-head">
         <div><p class="card-kicker">${line.merged ? `${line.sources.length} nódulos agrupados` : 'Linha de suprimento'}</p><h2>${escapeHtml(line.itemName)}</h2></div>
         <span class="status-pill">${statusText(line)}</span>

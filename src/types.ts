@@ -73,6 +73,9 @@ export interface SourceBalance {
   mk: string
   clock: number
   node: string
+  x?: number
+  y?: number
+  z?: number
   item: string
   itemName: string
   purity: Purity
