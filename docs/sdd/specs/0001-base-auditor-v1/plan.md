@@ -4,7 +4,7 @@
 
 ## Abordagem tecnica
 
-Registrar a implementacao atual como baseline SDD, sem alterar comportamento do app. A v1 permanece centrada em `src/main.ts`, `src/save/extract.ts`, `src/analysis/analyze.ts`, `src/worker/analyze.worker.ts` e nos dados gerados em `public/game-data.json`.
+Registrar a implementacao atual como baseline SDD, sem alterar comportamento do app. A v1 permanece organizada entre a entrada `src/main.ts`, a camada de UI em `src/app/`, a extracao em `src/save/extract.ts`, a analise em `src/analysis/analyze.ts`, o worker em `src/worker/analyze.worker.ts` e os dados gerados em `public/game-data.json`.
 
 ## Modulos afetados
 

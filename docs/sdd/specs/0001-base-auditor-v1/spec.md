@@ -4,23 +4,23 @@
 
 ## Contexto / Problema
 
-O Nodulo ja possui uma primeira versao funcional do auditor de linhas de recursos do Satisfactory. Antes de iniciar novas features, o projeto precisa registrar esse estado como baseline SDD para evitar que melhorias futuras alterem escopo, privacidade ou criterios de validacao sem decisao explicita.
+O Veinmetry ja possui uma primeira versao funcional do auditor de linhas de recursos do Satisfactory. Antes de iniciar novas features, o projeto precisa registrar esse estado como baseline SDD para evitar que melhorias futuras alterem escopo, privacidade ou criterios de validacao sem decisao explicita.
 
 ## Objetivo
 
-Documentar a v1 atual como base aprovada: upload local de `.sav`, extracao client-side, analise em worker, relatorio de linhas de recursos e mapa de nodulos usados.
+Documentar a v1 atual como base aprovada: upload local de `.sav`, extracao client-side, analise em worker, relatorio de linhas de recursos e mapa de pontos de recurso usados.
 
 ## Requisitos funcionais
 
 - [x] Permitir que o usuario selecione ou arraste um arquivo `.sav`.
 - [x] Processar o save somente no navegador, sem backend e sem upload do arquivo.
-- [x] Carregar `public/game-data.json` com dados de receitas, mineradoras, esteiras e nodulos.
+- [x] Carregar `public/game-data.json` com dados de receitas, mineradoras, esteiras e pontos de recurso.
 - [x] Extrair mineradoras, maquinas, esteiras/lifts, splitters, mergers, containers e conexoes reconhecidas.
 - [x] Calcular extracao, demanda, saldo e status por linha rastreavel.
 - [x] Agrupar linhas quando multiplas mineradoras entram na mesma malha.
 - [x] Limitar a extracao efetiva pela esteira ligada diretamente a saida da mineradora.
 - [x] Mostrar avisos quando uma linha mistura materiais, tem origem desconhecida ou termina sem consumidor reconhecido.
-- [x] Renderizar mapa Leaflet com pins dos nodulos usados quando houver coordenadas.
+- [x] Renderizar mapa Leaflet com pins dos pontos de recurso usados quando houver coordenadas.
 
 ## Requisitos nao-funcionais
 

@@ -1,4 +1,4 @@
-# SDD no Nodulo
+# SDD no Veinmetry
 
 Este documento define como David e Codex trabalham neste projeto usando
 **Spec-Driven Development (SDD)**: nenhuma feature nova comeca a ser
