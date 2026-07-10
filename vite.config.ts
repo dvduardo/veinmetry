@@ -1,6 +1,6 @@
 import { defineConfig } from 'vite'
 
 export default defineConfig({
-  base: '/nodulo/',
+  base: '/veinmetry/',
   worker: { format: 'es' },
 })

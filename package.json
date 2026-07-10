@@ -1,5 +1,5 @@
 {
-  "name": "nodulo",
+  "name": "veinmetry",
   "private": true,
   "version": "0.1.0",
   "type": "module",
@@ -9,12 +9,15 @@
     "preview": "vite preview",
     "test": "vitest run",
     "test:watch": "vitest",
+    "sdd:check": "node scripts/sdd-check.mjs",
     "data:generate": "node scripts/generate-game-data.mjs"
   },
   "dependencies": {
-    "@etothepii/satisfactory-file-parser": "4.1.1"
+    "@etothepii/satisfactory-file-parser": "4.1.1",
+    "leaflet": "^1.9.4"
   },
   "devDependencies": {
+    "@types/leaflet": "^1.9.21",
     "@types/node": "^22.20.1",
     "typescript": "^5.9.3",
     "vite": "^7.2.4",

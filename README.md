@@ -1,4 +1,4 @@
-# Nódulo
+# Veinmetry
 
 Auditor client-side de linhas de recursos do Satisfactory. O usuário solta um `.sav`; o app monta o grafo físico de esteiras e compara a extração das mineradoras com a demanda das máquinas conectadas.
 
@@ -24,6 +24,13 @@ npm run build
 ```
 
 Os testes cobrem splitter, merger de duas origens e gargalo na esteira de saída. Para validar contra um save real, confira primeiro a contagem de mineradoras e depois uma linha conhecida no jogo.
+
+## Estrutura
+
+- `src/main.ts`: entrada Vite; carrega estilos e inicializa o app.
+- `src/app/`: UI, renderização, fluxo de upload, tema e mapa Leaflet.
+- `src/analysis/`, `src/save/` e `src/worker/`: extração e análise do save.
+- `docs/`: documentação, dossiês e mockups visuais de apoio.
 
 ## Dados do jogo
 
